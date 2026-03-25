@@ -1,0 +1,185 @@
+{% extends "base.html" %}
+{% block title %}Admin — {{ group_name }}{% endblock %}
+{% block content %}
+<div class="page-header">
+  <p style="margin-bottom: 4px;"><a href="/admin">&larr; Back to Admin</a></p>
+  <h1>{{ group_name }} — Submission Detail</h1>
+  {% if submission %}
+  <p>Submitted by <strong>{{ submission.get('manager_name', 'Unknown') }}</strong>
+     on {{ submission.get('submitted_at', '')[:16].replace('T', ' at ') }}</p>
+  {% else %}
+  <p style="color: #F57F17;">This group has not yet been submitted for review.</p>
+  {% endif %}
+</div>
+
+<div class="stats-row">
+  <div class="stat-card">
+    <div class="stat-number">{{ total_txns }}</div>
+    <div class="stat-label">Total Transactions</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-number">${{ "{:,.2f}".format(g_summary.get('total_spend', 0)) }}</div>
+    <div class="stat-label">Total Spend</div>
+  </div>
+  <div class="stat-card accent">
+    <div class="stat-number">{{ approvals }}</div>
+    <div class="stat-label">Approved</div>
+  </div>
+  <div class="stat-card warn">
+    <div class="stat-number">{{ denials }}</div>
+    <div class="stat-label">Denied</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-number">{{ flagged_txns|length }}</div>
+    <div class="stat-label">Flagged Items</div>
+  </div>
+</div>
+
+<!-- Vehicle MPG Flags -->
+{% set group_mpg = {} %}
+{% for vname, ms in mpg_summary.items() %}
+  {% if ms.get('flagged') %}
+    {% for txn in flagged_txns %}
+      {% if txn.vehicle_name == vname %}
+        {% if vname not in group_mpg %}
+          {% set _ = group_mpg.update({vname: ms}) %}
+        {% endif %}
+      {% endif %}
+    {% endfor %}
+  {% endif %}
+{% endfor %}
+
+<!-- Denied Items -->
+{% set denied_items = [] %}
+{% for t in flagged_txns %}
+  {% if t.decision.get('action') == 'deny' %}
+    {% set _ = denied_items.append(t) %}
+  {% endif %}
+{% endfor %}
+
+{% if denied_items %}
+<h2 style="font-size: 18px; font-weight: 700; color: #C62828; margin: 24px 0 12px;">
+  Denied Items ({{ denied_items|length }})
+</h2>
+<div class="card">
+  <table class="txn-table">
+    <thead>
+      <tr>
+        <th>Date</th>
+        <th>Vehicle</th>
+        <th>Driver</th>
+        <th>Cost</th>
+        <th>Flags</th>
+        <th>Denial Reason</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for t in denied_items %}
+      <tr class="flagged">
+        <td style="white-space: nowrap;">{{ t.transaction_date }}</td>
+        <td>{{ t.vehicle_name }}</td>
+        <td>{{ t.driver or '—' }}</td>
+        <td>${{ "%.2f"|format(t.net_price) if t.net_price else '—' }}</td>
+        <td>
+          {% for flag in t.flags %}
+            <span class="flag-badge flag-{{ flag.flag }}">F{{ flag.flag }}</span>
+          {% endfor %}
+        </td>
+        <td><strong style="color: #C62828;">{{ t.decision.get('reason', '') }}</strong></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
+<!-- All Flagged Items -->
+<h2 style="font-size: 18px; font-weight: 700; color: var(--aeroseal-steel-blue); margin: 24px 0 12px;">
+  All Flagged Transactions ({{ flagged_txns|length }})
+</h2>
+<div class="card">
+  <table class="txn-table">
+    <thead>
+      <tr>
+        <th>Date</th>
+        <th>Vehicle</th>
+        <th>Driver</th>
+        <th>Gallons</th>
+        <th>Cost</th>
+        <th>Flags</th>
+        <th>Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for t in flagged_txns %}
+      <tr class="{% if t.decision.get('action') == 'deny' %}flagged{% endif %}">
+        <td style="white-space: nowrap;">{{ t.transaction_date }}</td>
+        <td>{{ t.vehicle_name }}</td>
+        <td>{{ t.driver or '—' }}</td>
+        <td>{{ "%.1f"|format(t.gallons) if t.gallons else '—' }}</td>
+        <td>${{ "%.2f"|format(t.net_price) if t.net_price else '—' }}</td>
+        <td>
+          {% for flag in t.flags %}
+            <span class="flag-badge flag-{{ flag.flag }}">F{{ flag.flag }}</span>
+          {% endfor %}
+        </td>
+        <td>
+          {% if t.decision.get('action') == 'approve' %}
+            <span class="decision-status decision-approved">Approved</span>
+          {% elif t.decision.get('action') == 'deny' %}
+            <span class="decision-status decision-denied">Denied</span>
+          {% else %}
+            <span style="color: #999; font-size: 12px;">Pending</span>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% if temp_cards %}
+<h2 style="font-size: 18px; font-weight: 700; color: #F57F17; margin: 24px 0 12px;">
+  Temporary Card Transactions ({{ temp_cards|length }})
+</h2>
+<div class="card">
+  <table class="txn-table">
+    <thead><tr><th>Date</th><th>Cardholder</th><th>Driver</th><th>Vendor</th><th>Gallons</th><th>Cost</th></tr></thead>
+    <tbody>
+      {% for t in temp_cards %}
+      <tr>
+        <td>{{ t.transaction_date }}</td>
+        <td>{{ t.cardholder }}</td>
+        <td>{{ t.driver or '—' }}</td>
+        <td>{{ t.vendor or '—' }}</td>
+        <td>{{ "%.1f"|format(t.gallons) if t.gallons else '—' }}</td>
+        <td>${{ "%.2f"|format(t.net_price) if t.net_price else '—' }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
+{% if declined %}
+<h2 style="font-size: 18px; font-weight: 700; color: #C62828; margin: 24px 0 12px;">
+  Declined Transactions ({{ declined|length }})
+</h2>
+<div class="card">
+  <table class="txn-table">
+    <thead><tr><th>Date</th><th>Vehicle/Card</th><th>Driver</th><th>Vendor</th><th>Amount</th></tr></thead>
+    <tbody>
+      {% for t in declined %}
+      <tr>
+        <td>{{ t.transaction_date }}</td>
+        <td>{{ t.vehicle_name or t.cardholder }}</td>
+        <td>{{ t.driver or '—' }}</td>
+        <td>{{ t.vendor or '—' }}</td>
+        <td>${{ "%.2f"|format(t.gross_price) if t.gross_price else '—' }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+{% endblock %}

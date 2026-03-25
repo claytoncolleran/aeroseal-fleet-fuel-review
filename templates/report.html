@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Consolidated Fuel Review Report — Aeroseal</title>
+  <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --aeroseal-steel-blue: #005A90;
+      --aeroseal-sapphire: #008CD1;
+      --aeroseal-midnight-blue: #113C5B;
+      --aeroseal-citrus-green: #C9DC50;
+      --aeroseal-titanium: #CBD0D4;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Figtree', Arial, sans-serif;
+      font-size: 12px; color: var(--aeroseal-midnight-blue);
+      line-height: 1.5; background: #fff;
+    }
+    .report { max-width: 900px; margin: 0 auto; padding: 40px; }
+
+    /* Header */
+    .report-header {
+      display: flex; justify-content: space-between; align-items: flex-start;
+      padding-bottom: 20px; border-bottom: 3px solid var(--aeroseal-sapphire);
+      margin-bottom: 24px;
+    }
+    .report-title { font-size: 22px; font-weight: 700; color: var(--aeroseal-steel-blue); }
+    .report-subtitle { font-size: 13px; color: #5A6B7B; margin-top: 4px; }
+    .report-meta { text-align: right; font-size: 11px; color: #5A6B7B; }
+    .report-meta strong { color: var(--aeroseal-midnight-blue); }
+
+    /* Sections */
+    h2 {
+      font-size: 16px; font-weight: 700; color: var(--aeroseal-steel-blue);
+      margin: 28px 0 12px; padding-bottom: 6px;
+      border-bottom: 2px solid var(--aeroseal-sapphire);
+    }
+    h3 {
+      font-size: 14px; font-weight: 600; color: var(--aeroseal-midnight-blue);
+      margin: 16px 0 8px;
+    }
+
+    /* Tables */
+    table { width: 100%; border-collapse: collapse; margin-bottom: 16px; font-size: 11px; }
+    th {
+      background: var(--aeroseal-midnight-blue); color: #fff;
+      padding: 6px 10px; text-align: left; font-weight: 600;
+      font-size: 10px; text-transform: uppercase; letter-spacing: 0.04em;
+    }
+    td { padding: 6px 10px; border-bottom: 1px solid #E8ECF0; }
+    tr:last-child td { border-bottom: none; }
+    .total-row { background: #F0F4F7; font-weight: 700; }
+    .total-row td { border-top: 2px solid var(--aeroseal-sapphire); }
+    .denied-row { background: #FFF5F5; }
+    .flag-badge {
+      display: inline-block; padding: 1px 6px; border-radius: 3px;
+      font-size: 9px; font-weight: 600; margin: 0 1px;
+    }
+    .flag-1 { background: #FFEBEE; color: #C62828; }
+    .flag-2 { background: #FFF3E0; color: #E65100; }
+    .flag-3 { background: #E3F2FD; color: #1565C0; }
+    .flag-4 { background: #F3E5F5; color: #6A1B9A; }
+    .flag-5 { background: #FFF8E1; color: #F57F17; }
+    .flag-6 { background: #FCE4EC; color: #AD1457; }
+
+    /* Summary boxes */
+    .summary-grid {
+      display: grid; grid-template-columns: repeat(4, 1fr);
+      gap: 12px; margin-bottom: 20px;
+    }
+    .summary-box {
+      text-align: center; padding: 12px;
+      border: 1px solid #E8ECF0; border-radius: 6px;
+      border-top: 3px solid var(--aeroseal-sapphire);
+    }
+    .summary-box.accent { border-top-color: var(--aeroseal-citrus-green); }
+    .summary-box.warn { border-top-color: #C62828; }
+    .summary-value { font-size: 22px; font-weight: 700; color: var(--aeroseal-sapphire); }
+    .summary-box.accent .summary-value { color: #2E7D32; }
+    .summary-box.warn .summary-value { color: #C62828; }
+    .summary-label {
+      font-size: 10px; font-weight: 600; text-transform: uppercase;
+      letter-spacing: 0.05em; color: var(--aeroseal-titanium); margin-top: 2px;
+    }
+
+    /* Signature */
+    .signature-block {
+      margin-top: 40px; padding-top: 20px;
+      border-top: 1px solid var(--aeroseal-titanium);
+      display: flex; justify-content: space-between;
+    }
+    .sig-line {
+      width: 280px; border-bottom: 1px solid var(--aeroseal-midnight-blue);
+      padding-bottom: 4px; margin-bottom: 4px;
+      font-size: 13px; min-height: 24px;
+    }
+    .sig-label { font-size: 10px; color: #5A6B7B; text-transform: uppercase; }
+
+    /* Print */
+    .no-print { }
+    @media print {
+      body { font-size: 11px; }
+      .report { padding: 20px; }
+      .no-print { display: none !important; }
+      h2 { page-break-after: avoid; }
+      table { page-break-inside: auto; }
+      tr { page-break-inside: avoid; }
+    }
+
+    /* Action bar */
+    .action-bar {
+      position: sticky; top: 0; z-index: 10;
+      background: #fff; padding: 12px 0; margin-bottom: 16px;
+      border-bottom: 1px solid #E8ECF0;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .btn {
+      font-family: 'Figtree', Arial, sans-serif; font-weight: 600;
+      font-size: 13px; padding: 8px 24px; border-radius: 6px;
+      border: none; cursor: pointer; transition: all 0.2s;
+    }
+    .btn-primary { background: var(--aeroseal-sapphire); color: #fff; }
+    .btn-primary:hover { background: var(--aeroseal-steel-blue); }
+    .btn-outline {
+      background: transparent; color: var(--aeroseal-sapphire);
+      border: 1.5px solid var(--aeroseal-sapphire);
+    }
+    .btn-outline:hover { background: var(--aeroseal-sapphire); color: #fff; }
+    .admin-input {
+      font-family: 'Figtree', Arial, sans-serif; font-size: 13px;
+      padding: 8px 14px; border: 1px solid var(--aeroseal-titanium);
+      border-radius: 6px; width: 220px;
+    }
+    .admin-input:focus {
+      outline: none; border-color: var(--aeroseal-sapphire);
+      box-shadow: 0 0 0 3px rgba(0,140,209,0.15);
+    }
+  </style>
+</head>
+<body>
+<div class="report">
+
+  <!-- Action Bar (screen only) -->
+  <div class="action-bar no-print">
+    <div>
+      <a href="/admin" style="font-size: 13px; color: var(--aeroseal-sapphire); text-decoration: none;">&larr; Back to Admin</a>
+    </div>
+    <div style="display: flex; gap: 10px; align-items: center;">
+      <input type="text" id="admin-name" class="admin-input" placeholder="Fleet Admin Name">
+      <button class="btn btn-primary" onclick="adminApprove()">Approve &amp; Sign</button>
+      <button class="btn btn-outline" onclick="window.print()">Download PDF</button>
+    </div>
+  </div>
+
+  <!-- Report Header -->
+  <div class="report-header">
+    <div>
+      <div class="report-title">Consolidated Fuel Review Report</div>
+      <div class="report-subtitle">Aeroseal Fleet — Monthly Accounting Report</div>
+    </div>
+    <div class="report-meta">
+      <strong>Generated:</strong> {{ generated_at }}<br>
+      <strong>Period:</strong> {{ summary.get('fuel_type_medians', {}).keys()|list|length }} fuel types analyzed<br>
+      <strong>Transactions:</strong> {{ summary.get('total_vehicle_transactions_analyzed', 0) }}
+    </div>
+  </div>
+
+  <!-- Executive Summary -->
+  <h2>Executive Summary</h2>
+  <div class="summary-grid">
+    <div class="summary-box">
+      <div class="summary-value">${{ "{:,.2f}".format(grand_total) }}</div>
+      <div class="summary-label">Grand Total Spend</div>
+    </div>
+    <div class="summary-box">
+      <div class="summary-value">{{ summary.get('total_vehicle_transactions_analyzed', 0) }}</div>
+      <div class="summary-label">Total Transactions</div>
+    </div>
+    <div class="summary-box accent">
+      <div class="summary-value">{{ total_approved }}</div>
+      <div class="summary-label">Flags Approved</div>
+    </div>
+    <div class="summary-box warn">
+      <div class="summary-value">{{ total_denied }}</div>
+      <div class="summary-label">Flags Denied</div>
+    </div>
+  </div>
+
+  <!-- Spend by Fleet Group -->
+  <h2>Spend by Fleet Group</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Fleet Group</th>
+        <th>Transactions</th>
+        <th>Flagged</th>
+        <th>Approved</th>
+        <th>Denied</th>
+        <th style="text-align: right;">Total Spend</th>
+        <th>Manager</th>
+        <th>Submitted</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for g in group_data %}
+      <tr>
+        <td><strong>{{ g.name }}</strong></td>
+        <td>{{ g.summary.get('total_txns', 0) }}</td>
+        <td>{{ g.summary.get('flagged_txns', 0) }}</td>
+        <td>{{ g.approved }}</td>
+        <td>{% if g.denied > 0 %}<strong style="color: #C62828;">{{ g.denied }}</strong>{% else %}0{% endif %}</td>
+        <td style="text-align: right;">${{ "{:,.2f}".format(g.spend) }}</td>
+        <td>{{ g.submission.get('manager_name', '—') if g.submission else '—' }}</td>
+        <td>{{ g.submission.get('submitted_at', '')[:10] if g.submission else 'Pending' }}</td>
+      </tr>
+      {% endfor %}
+      <tr class="total-row">
+        <td>Grand Total</td>
+        <td>{{ summary.get('total_vehicle_transactions_analyzed', 0) }}</td>
+        <td>{{ total_flagged }}</td>
+        <td>{{ total_approved }}</td>
+        <td>{{ total_denied }}</td>
+        <td style="text-align: right;">${{ "{:,.2f}".format(grand_total) }}</td>
+        <td colspan="2"></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- Vehicles Flagged for Low MPG -->
+  {% if flagged_vehicles %}
+  <h2>Vehicles Flagged for Low Fuel Efficiency (Flag 1)</h2>
+  <table>
+    <thead>
+      <tr><th>Vehicle</th><th>Period MPG</th><th>Baseline MPG</th><th>Variance</th><th>Miles</th><th>Gallons</th><th>Fills</th></tr>
+    </thead>
+    <tbody>
+      {% for vname, ms in flagged_vehicles|dictsort %}
+      <tr>
+        <td><strong>{{ vname }}</strong></td>
+        <td><strong style="color: #C62828;">{{ ms.period_mpg }}</strong></td>
+        <td>{{ ms.baseline_mpg or '—' }}</td>
+        <td style="color: #C62828;">{{ ms.pct_diff }}%</td>
+        <td>{{ "{:,}".format(ms.total_miles) }}</td>
+        <td>{{ ms.total_gallons }}</td>
+        <td>{{ ms.fill_count }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+
+  <!-- Denied Items Detail -->
+  {% set all_denied = [] %}
+  {% for g in group_data %}
+    {% for item in g.denied_items %}
+      {% set _ = all_denied.append(item|combine({'group': g.name})) if item is mapping else None %}
+    {% endfor %}
+  {% endfor %}
+
+  <h2>Denied Transactions — Full Detail</h2>
+  {% set has_denials = false %}
+  {% for g in group_data %}
+    {% if g.denied_items %}
+      {% set has_denials = true %}
+      <h3>{{ g.name }}</h3>
+      <table>
+        <thead>
+          <tr><th>Date</th><th>Vehicle</th><th>Driver</th><th>Cost</th><th>Flags</th><th>Denial Reason</th></tr>
+        </thead>
+        <tbody>
+          {% for t in g.denied_items %}
+          <tr class="denied-row">
+            <td>{{ t.transaction_date }}</td>
+            <td>{{ t.vehicle_name }}</td>
+            <td>{{ t.driver or '—' }}</td>
+            <td>${{ "%.2f"|format(t.net_price) if t.net_price else '—' }}</td>
+            <td>
+              {% for flag in t.flags %}
+                <span class="flag-badge flag-{{ flag.flag }}">F{{ flag.flag }}</span>
+              {% endfor %}
+            </td>
+            <td><strong>{{ t.decision.get('reason', '') }}</strong></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% endif %}
+  {% endfor %}
+  {% if not has_denials %}
+    <p style="color: #5A6B7B; padding: 12px 0;">No transactions were denied during this review period.</p>
+  {% endif %}
+
+  <!-- Fuel Type Pricing -->
+  <h2>Fuel Type Pricing Summary</h2>
+  <table>
+    <thead><tr><th>Fuel Type</th><th>Median $/Gallon</th></tr></thead>
+    <tbody>
+      {% for fuel_type, median in summary.get('fuel_type_medians', {}).items() %}
+      <tr><td>{{ fuel_type }}</td><td>${{ "%.3f"|format(median) }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <!-- Excluded Items -->
+  <h2>Excluded from Analysis</h2>
+  <table>
+    <thead><tr><th>Category</th><th>Count</th><th>Notes</th></tr></thead>
+    <tbody>
+      <tr><td>Equipment Card Transactions</td><td>{{ summary.get('equipment_transactions_excluded', 0) }}</td><td>UNIT/EQUIPMENT cards — out of scope for vehicle analysis</td></tr>
+      <tr><td>Temporary Card Transactions</td><td>{{ summary.get('temporary_card_transactions', 0) }}</td><td>Reviewed by fleet managers separately</td></tr>
+      <tr><td>Declined Transactions</td><td>{{ summary.get('declined_transactions', 0) }}</td><td>No fuel dispensed — acknowledged by managers</td></tr>
+    </tbody>
+  </table>
+
+  <!-- Signature Block -->
+  <div class="signature-block">
+    <div>
+      <div class="sig-line" id="sig-admin-name"></div>
+      <div class="sig-label">Fleet Administrator Name</div>
+    </div>
+    <div>
+      <div class="sig-line" id="sig-date"></div>
+      <div class="sig-label">Date</div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+function adminApprove() {
+  const name = document.getElementById('admin-name').value.trim();
+  if (!name) { alert('Please enter your name.'); return; }
+
+  fetch('/api/admin-approve', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({admin_name: name})
+  }).then(r => r.json()).then(() => {
+    document.getElementById('sig-admin-name').textContent = name;
+    document.getElementById('sig-date').textContent = new Date().toLocaleDateString();
+    document.getElementById('admin-name').disabled = true;
+    const btn = event.target;
+    btn.textContent = 'Approved';
+    btn.style.background = '#2E7D32';
+    btn.disabled = true;
+  });
+}
+</script>
+</body>
+</html>

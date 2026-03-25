@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% block title %}Admin{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1>Fleet Admin Overview</h1>
+  <p>Review fleet group submissions and generate consolidated reports</p>
+</div>
+
+<div class="stats-row">
+  {% set submitted = group_statuses.values()|selectattr('submission')|list|length %}
+  {% set total_groups = groups|length %}
+  <div class="stat-card accent">
+    <div class="stat-number">{{ submitted }}</div>
+    <div class="stat-label">Submitted</div>
+  </div>
+  <div class="stat-card warn">
+    <div class="stat-number">{{ total_groups - submitted }}</div>
+    <div class="stat-label">Pending</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-number">{{ total_groups }}</div>
+    <div class="stat-label">Total Groups</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-number">${{ "{:,.2f}".format(summary.get('fuel_type_medians', {}).values()|list|sum if summary.get('fuel_type_medians') else 0) }}</div>
+    <div class="stat-label">Avg $/Gal (all types)</div>
+  </div>
+</div>
+
+<h2 style="font-size: 18px; font-weight: 700; color: var(--aeroseal-steel-blue); margin: 24px 0 16px;">Fleet Group Submissions</h2>
+
+{% for group in groups %}
+{% set gs = group_statuses.get(group, {}) %}
+{% set sub = gs.get('submission') %}
+<div class="group-status-card {% if sub %}submitted{% else %}pending{% endif %}">
+  <div style="flex: 1;">
+    <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 4px;">
+      <h3 style="font-size: 16px; font-weight: 600; color: var(--aeroseal-midnight-blue);">{{ group }}</h3>
+      {% if sub %}
+        <span class="status-badge status-submitted">Submitted</span>
+      {% else %}
+        <span class="status-badge status-pending">Pending</span>
+      {% endif %}
+    </div>
+    <div style="font-size: 13px; color: #5A6B7B;">
+      {{ gs.get('total_txns', 0) }} transactions &middot;
+      {{ gs.get('flagged_txns', 0) }} flagged &middot;
+      {{ gs.get('decisions_made', 0) }} reviewed &middot;
+      ${{ "{:,.2f}".format(gs.get('total_spend', 0)) }} spend
+    </div>
+    {% if sub %}
+    <div style="font-size: 12px; color: #5A6B7B; margin-top: 4px;">
+      Submitted by <strong>{{ sub.get('manager_name', 'Unknown') }}</strong>
+      on {{ sub.get('submitted_at', '')[:16].replace('T', ' at ') }}
+    </div>
+    {% endif %}
+  </div>
+  <div style="display: flex; gap: 12px; align-items: center;">
+    {% if sub %}
+      <a href="/admin/group/{{ group }}" style="font-size: 13px; font-weight: 600;">View Submission</a>
+    {% endif %}
+    <a href="/group/{{ group }}" style="font-size: 13px; font-weight: 500; color: #5A6B7B;">Manager View &rarr;</a>
+  </div>
+</div>
+{% endfor %}
+
+{% if submitted == total_groups and total_groups > 0 %}
+<div style="text-align: center; margin-top: 32px; padding: 32px; background: #fff; border-radius: 8px; box-shadow: var(--shadow-sm);">
+  <div style="font-size: 20px; font-weight: 700; color: var(--aeroseal-steel-blue); margin-bottom: 8px;">
+    All Fleet Groups Submitted
+  </div>
+  <p style="color: #5A6B7B; margin-bottom: 20px;">Ready to generate the consolidated accounting report.</p>
+  <a href="/admin/report" class="btn-submit" style="display: inline-block; text-decoration: none;">
+    Generate Accounting Report
+  </a>
+</div>
+{% endif %}
+{% endblock %}

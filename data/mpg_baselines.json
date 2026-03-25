@@ -1,0 +1,627 @@
+{
+  "_metadata": {
+    "description": "MPG baselines for Aeroseal fleet vehicles. Used for fuel efficiency anomaly detection (Flag 1).",
+    "sources": {
+      "EPA": "fueleconomy.gov API — official EPA combined MPG for light-duty vehicles (GVWR < 8,500 lbs)",
+      "MFR": "Manufacturer published estimates for commercial vehicles exempt from EPA testing (GVWR > 8,500 lbs)",
+      "MFR+RW": "Manufacturer estimate cross-referenced with real-world data from Fuelly.com owner reports"
+    },
+    "notes": [
+      "All MPG values are combined (city+highway weighted average)",
+      "Commercial vehicles (ProMaster, Transit cargo, Sprinter, Isuzu NPR, Ram 2500/3500) are EPA-exempt — estimates used",
+      "Flex Fuel vehicles baselined on regular gasoline. E85 use will be flagged separately under Flag 6",
+      "Ram 'Truck' vehicles with vehicle_type 'Van' in Fleetio are ProMaster cargo vans, not pickup trucks",
+      "20% below these baselines triggers Flag 1"
+    ],
+    "created": "2026-03-25",
+    "last_updated": "2026-03-25"
+  },
+  "vehicles": {
+    "09-Honda-Suv-1694": {
+      "mpg_combined": 22,
+      "source": "EPA",
+      "epa_detail": "2009 Honda CR-V 4WD, 2.4L 4cyl, Regular gasoline",
+      "fuel_type": "Gasoline"
+    },
+    "11-Chevrolet-Truck-6443": {
+      "mpg_combined": 17,
+      "source": "EPA",
+      "epa_detail": "2011 Chevrolet Silverado C15 2WD, 5.3L V8, Flex Fuel (gasoline baseline)",
+      "fuel_type": "Flex Fuel"
+    },
+    "11-GMC-Van-4650": {
+      "mpg_combined": 15,
+      "source": "EPA",
+      "epa_detail": "2011 GMC Savana 1500 2WD cargo, 5.3L V8, Flex Fuel (gasoline baseline)",
+      "fuel_type": "Flex Fuel"
+    },
+    "14-Ford-Truck-8756": {
+      "mpg_combined": 16,
+      "source": "MFR",
+      "epa_detail": "2014 Ford F-250/F-350 Super Duty, 6.7L V8 turbo diesel (B20). Not EPA-tested. Manufacturer estimate 15-17 MPG combined.",
+      "fuel_type": "Diesel"
+    },
+    "14-Nissan-Truck-5030": {
+      "mpg_combined": 19,
+      "source": "EPA",
+      "epa_detail": "2014 Nissan Frontier 2WD, 2.5L 4cyl, Regular gasoline",
+      "fuel_type": "Gasoline"
+    },
+    "15-Isuzu-Box-4588": {
+      "mpg_combined": 12,
+      "source": "MFR+RW",
+      "epa_detail": "2015 Isuzu NPR/NPR-HD box truck, 5.2L 4cyl turbo diesel. Not EPA-tested. Manufacturer ~14 MPG, real-world 10-14 MPG loaded.",
+      "fuel_type": "Diesel"
+    },
+    "17-Ford-Van-6645": {
+      "mpg_combined": 16,
+      "source": "MFR+RW",
+      "epa_detail": "2017 Ford Transit cargo van, 3.5L V6 PFDi, gasoline. EPA tests T-150 only (15/19/17). T-250/T-350 cargo est. ~16 combined.",
+      "fuel_type": "Gasoline"
+    },
+    "18-Chevrolet-Truck-1637": {
+      "mpg_combined": 19,
+      "source": "EPA",
+      "epa_detail": "2018 Chevrolet Silverado C15 2WD, 5.3L V8, Regular gasoline",
+      "fuel_type": "Gasoline"
+    },
+    "19-Chevrolet-Truck-5289": {
+      "mpg_combined": 17,
+      "source": "MFR",
+      "epa_detail": "2019 Chevrolet Silverado 2500/3500 HD, diesel (B20). Not EPA-tested. Manufacturer estimate 16-18 MPG combined.",
+      "fuel_type": "Diesel"
+    },
+    "19-Ram-Truck-0537": {
+      "mpg_combined": 15,
+      "source": "MFR+RW",
+      "epa_detail": "2019 Ram ProMaster cargo van, 3.6L V6 Pentastar, 6-speed auto, gasoline. Not EPA-tested. Real-world avg ~15 MPG.",
+      "fuel_type": "Gasoline"
+    },
+    "19-Ram-Van-4800": {
+      "mpg_combined": 15,
+      "source": "MFR+RW",
+      "epa_detail": "2019 Ram ProMaster cargo van, 3.6L V6 Pentastar, 6-speed auto, gasoline. Not EPA-tested. Real-world avg ~15 MPG.",
+      "fuel_type": "Gasoline"
+    },
+    "20-Ford-Van-3565": {
+      "mpg_combined": 16,
+      "source": "MFR+RW",
+      "epa_detail": "2020 Ford Transit cargo van, 3.5L V6, Flex Fuel (gasoline baseline). T-150 EPA: 15/19/17. T-250/T-350 est. ~16.",
+      "fuel_type": "Flex Fuel"
+    },
+    "20-Ford-Van-8256": {
+      "mpg_combined": 16,
+      "source": "MFR+RW",
+      "epa_detail": "2020 Ford Transit cargo van, 3.5L V6 PFDi, gasoline. T-150 EPA: 15/19/17. Larger cargo variants est. ~16.",
+      "fuel_type": "Gasoline"
+    },
+    "20-Isuzu-Box-2938": {
+      "mpg_combined": 11,
+      "source": "MFR+RW",
+      "epa_detail": "2020 Isuzu NPR box truck, 6.0L V8 gasoline. Not EPA-tested. Manufacturer est. ~11 MPG, real-world 9-11 MPG.",
+      "fuel_type": "Gasoline"
+    },
+    "20-Ram-Truck-1402": {
+      "mpg_combined": 15,
+      "source": "MFR+RW",
+      "epa_detail": "2020 Ram ProMaster cargo van, 3.6L V6 Pentastar, 6-speed auto, gasoline. Not EPA-tested. Real-world avg ~15 MPG.",
+      "fuel_type": "Gasoline"
+    },
+    "20-Ram-Truck-4145": {
+      "mpg_combined": 15,
+      "source": "MFR+RW",
+      "epa_detail": "2020 Ram ProMaster cargo van, 3.6L V6 Pentastar, 6-speed auto, gasoline. Not EPA-tested. Real-world avg ~15 MPG.",
+      "fuel_type": "Gasoline"
+    },
+    "20-Ram-Van-1931": {
+      "mpg_combined": 15,
+      "source": "MFR+RW",
+      "epa_detail": "2020 Ram ProMaster cargo van, 3.6L V6 Pentastar, 6-speed auto, gasoline. Not EPA-tested. Real-world avg ~15 MPG.",
+      "fuel_type": "Gasoline"
+    },
+    "20-Ram-Van-3424": {
+      "mpg_combined": 15,
+      "source": "MFR+RW",
+      "epa_detail": "2020 Ram ProMaster cargo van, 3.6L V6 Pentastar, 6-speed auto, gasoline. Not EPA-tested. Real-world avg ~15 MPG.",
+      "fuel_type": "Gasoline"
+    },
+    "2023-Ram-Van-6754": {
+      "mpg_combined": 16,
+      "source": "MFR+RW",
+      "epa_detail": "2023 Ram ProMaster cargo van, 3.6L V6 Pentastar, 9-speed auto, gasoline. Not EPA-tested. 9-speed trans adds ~1 MPG over 6-speed. Real-world avg ~16 MPG.",
+      "fuel_type": "Gasoline"
+    },
+    "21-Chevrolet-Truck-5374": {
+      "mpg_combined": 17,
+      "source": "EPA",
+      "epa_detail": "2021 Chevrolet Silverado 2WD, 5.3L V8, Regular gasoline. EPA: 15/21/17.",
+      "fuel_type": "Gasoline"
+    },
+    "21-Ram-Truck-8236": {
+      "mpg_combined": 20,
+      "source": "EPA",
+      "epa_detail": "2021 Ram 1500 2WD, 5.7L V8 HEMI, Midgrade gasoline. EPA: 17/23/19. (Pickup Truck type in Fleetio)",
+      "fuel_type": "Gasoline"
+    },
+    "21-Ram-Truck-8610": {
+      "mpg_combined": 22,
+      "source": "MFR",
+      "epa_detail": "2021 Ram 2500/3500 HD diesel. Not EPA-tested if GVWR > 8,500 lbs. Cummins 6.7L turbo diesel est. 20-24 MPG highway, ~18 city. Combined est. ~22.",
+      "fuel_type": "Diesel"
+    },
+    "22-Ford-Van-8504": {
+      "mpg_combined": 16,
+      "source": "MFR+RW",
+      "epa_detail": "2022 Ford Transit cargo van, 3.5L V6, Flex Fuel (gasoline baseline). Cargo version not EPA-tested. Est. ~16 combined.",
+      "fuel_type": "Flex Fuel"
+    },
+    "22-Ram-Truck-4402": {
+      "mpg_combined": 22,
+      "source": "MFR",
+      "epa_detail": "2022 Ram 2500/3500 HD, Cummins 6.7L turbo diesel. Not EPA-tested. Manufacturer est. ~20-24 MPG combined. (Pickup Truck type)",
+      "fuel_type": "Diesel"
+    },
+    "22-Ram-Truck-8540": {
+      "mpg_combined": 22,
+      "source": "MFR",
+      "epa_detail": "2022 Ram 2500/3500 HD, Cummins 6.7L turbo diesel. Not EPA-tested. Manufacturer est. ~20-24 MPG combined.",
+      "fuel_type": "Diesel"
+    },
+    "22-Ram-Truck-8541": {
+      "mpg_combined": 22,
+      "source": "MFR",
+      "epa_detail": "2022 Ram 2500/3500 HD, Cummins 6.7L turbo diesel. Not EPA-tested. Manufacturer est. ~20-24 MPG combined.",
+      "fuel_type": "Diesel"
+    },
+    "22-Ram-Truck-9005": {
+      "mpg_combined": 15,
+      "source": "MFR+RW",
+      "epa_detail": "2022 Ram ProMaster cargo van, 3.6L V6 Pentastar, gasoline. Not EPA-tested. Real-world avg ~15 MPG.",
+      "fuel_type": "Gasoline"
+    },
+    "22-Ram-Truck-9006": {
+      "mpg_combined": 15,
+      "source": "MFR+RW",
+      "epa_detail": "2022 Ram ProMaster cargo van, 3.6L V6 Pentastar, gasoline. Not EPA-tested. Real-world avg ~15 MPG.",
+      "fuel_type": "Gasoline"
+    },
+    "22-Ram-Truck-9007": {
+      "mpg_combined": 20,
+      "source": "EPA",
+      "epa_detail": "2022 Ram 1500 2WD, 5.7L V8 HEMI, gasoline. EPA: 17/23/19-20. (Pickup Truck type in Fleetio)",
+      "fuel_type": "Gasoline"
+    },
+    "23-Ford-BoxTruck-0244": {
+      "mpg_combined": 11,
+      "source": "MFR",
+      "epa_detail": "2023 Ford E-450/F-550 box truck chassis, gasoline. Not EPA-tested. Manufacturer est. 10-12 MPG combined.",
+      "fuel_type": "Gasoline"
+    },
+    "23-Ford-Van-0355": {
+      "mpg_combined": 16,
+      "source": "MFR+RW",
+      "epa_detail": "2023 Ford Transit cargo van, 3.5L V6, Flex Fuel (gasoline baseline). Not EPA-tested. Est. ~16 combined.",
+      "fuel_type": "Flex Fuel"
+    },
+    "23-Ford-Van-0478": {
+      "mpg_combined": 16,
+      "source": "MFR+RW",
+      "epa_detail": "2023 Ford Transit cargo van, 3.5L V6 PFDi, gasoline. Not EPA-tested. Est. ~16 combined.",
+      "fuel_type": "Gasoline"
+    },
+    "23-Ford-Van-2294": {
+      "mpg_combined": 16,
+      "source": "MFR+RW",
+      "epa_detail": "2023 Ford Transit cargo van, 3.5L V6, Flex Fuel (gasoline baseline). Not EPA-tested. Est. ~16 combined.",
+      "fuel_type": "Flex Fuel"
+    },
+    "23-Ford-Van-2451": {
+      "mpg_combined": 16,
+      "source": "MFR+RW",
+      "epa_detail": "2023 Ford Transit cargo van, 3.5L V6, Flex Fuel (gasoline baseline). Not EPA-tested. Est. ~16 combined.",
+      "fuel_type": "Flex Fuel"
+    },
+    "23-Ford-Van-3283": {
+      "mpg_combined": 16,
+      "source": "MFR+RW",
+      "epa_detail": "2023 Ford Transit cargo van, 3.5L V6, Flex Fuel (gasoline baseline). Not EPA-tested. Est. ~16 combined.",
+      "fuel_type": "Flex Fuel"
+    },
+    "23-Ford-Van-4003": {
+      "mpg_combined": 16,
+      "source": "MFR+RW",
+      "epa_detail": "2023 Ford Transit cargo van, 3.5L V6, Flex Fuel (gasoline baseline). Not EPA-tested. Est. ~16 combined.",
+      "fuel_type": "Flex Fuel"
+    },
+    "23-Ford-Van-4141": {
+      "mpg_combined": 16,
+      "source": "MFR+RW",
+      "epa_detail": "2023 Ford Transit cargo van, 3.5L V6, Flex Fuel (gasoline baseline). Not EPA-tested. Est. ~16 combined.",
+      "fuel_type": "Flex Fuel"
+    },
+    "23-Ford-Van-4351": {
+      "mpg_combined": 16,
+      "source": "MFR+RW",
+      "epa_detail": "2023 Ford Transit cargo van, 3.5L V6, Flex Fuel (gasoline baseline). Not EPA-tested. Est. ~16 combined.",
+      "fuel_type": "Flex Fuel"
+    },
+    "23-Ford-Van-4387": {
+      "mpg_combined": 16,
+      "source": "MFR+RW",
+      "epa_detail": "2023 Ford Transit cargo van, 3.5L V6, Flex Fuel (gasoline baseline). Not EPA-tested. Est. ~16 combined.",
+      "fuel_type": "Flex Fuel"
+    },
+    "23-Ford-Van-4519": {
+      "mpg_combined": 16,
+      "source": "MFR+RW",
+      "epa_detail": "2023 Ford Transit cargo van, 3.5L V6, Flex Fuel (gasoline baseline). Not EPA-tested. Est. ~16 combined.",
+      "fuel_type": "Flex Fuel"
+    },
+    "23-Ford-Van-5103": {
+      "mpg_combined": 16,
+      "source": "MFR+RW",
+      "epa_detail": "2023 Ford Transit cargo van, 3.5L V6, Flex Fuel (gasoline baseline). Not EPA-tested. Est. ~16 combined.",
+      "fuel_type": "Flex Fuel"
+    },
+    "23-Ford-Van-5591": {
+      "mpg_combined": 16,
+      "source": "MFR+RW",
+      "epa_detail": "2023 Ford Transit cargo van, 3.5L V6 PFDi, gasoline. Not EPA-tested. Est. ~16 combined.",
+      "fuel_type": "Gasoline"
+    },
+    "23-Ford-Van-9103": {
+      "mpg_combined": 16,
+      "source": "MFR+RW",
+      "epa_detail": "2023 Ford Transit cargo van, 3.5L V6 PFDi, gasoline. Not EPA-tested. Est. ~16 combined.",
+      "fuel_type": "Gasoline"
+    },
+    "23-Ford-Van-9181": {
+      "mpg_combined": 16,
+      "source": "MFR+RW",
+      "epa_detail": "2023 Ford Transit cargo van, 3.5L V6, Flex Fuel (gasoline baseline). Not EPA-tested. Est. ~16 combined.",
+      "fuel_type": "Flex Fuel"
+    },
+    "23-Isuzu-Box-9332": {
+      "mpg_combined": 11,
+      "source": "MFR+RW",
+      "epa_detail": "2023 Isuzu NPR box truck, 6.6L V8 gasoline. Not EPA-tested. Manufacturer est. ~9-11 MPG, real-world ~11 MPG.",
+      "fuel_type": "Gasoline"
+    },
+    "23-Merc-Van-3079": {
+      "mpg_combined": 18,
+      "source": "MFR+RW",
+      "epa_detail": "2023 Mercedes-Benz Sprinter 2500, 2.0L 4cyl turbo diesel. Not EPA-tested. Manufacturer 14 city/20 hwy. Real-world avg 17.7 MPG (Fuelly). Est. ~18 combined.",
+      "fuel_type": "Gasoline"
+    },
+    "23-Ram-Truck-0824": {
+      "mpg_combined": 16,
+      "source": "MFR+RW",
+      "epa_detail": "2023 Ram ProMaster cargo van, 3.6L V6 Pentastar, 9-speed auto, gasoline. Not EPA-tested. Real-world avg ~16 MPG.",
+      "fuel_type": "Gasoline"
+    },
+    "23-Ram-Truck-1503": {
+      "mpg_combined": 16,
+      "source": "MFR+RW",
+      "epa_detail": "2023 Ram ProMaster cargo van, 3.6L V6 Pentastar, 9-speed auto, gasoline. Not EPA-tested. Real-world avg ~16 MPG.",
+      "fuel_type": "Gasoline"
+    },
+    "23-Ram-Truck-1515": {
+      "mpg_combined": 16,
+      "source": "MFR+RW",
+      "epa_detail": "2023 Ram ProMaster cargo van, 3.6L V6 Pentastar, 9-speed auto, gasoline. Not EPA-tested. Real-world avg ~16 MPG.",
+      "fuel_type": "Gasoline"
+    },
+    "23-Ram-Truck-2903": {
+      "mpg_combined": 16,
+      "source": "MFR+RW",
+      "epa_detail": "2023 Ram ProMaster cargo van, 3.6L V6 Pentastar, 9-speed auto, gasoline. Not EPA-tested. Real-world avg ~16 MPG.",
+      "fuel_type": "Gasoline"
+    },
+    "23-Ram-Truck-2909": {
+      "mpg_combined": 16,
+      "source": "MFR+RW",
+      "epa_detail": "2023 Ram ProMaster cargo van, 3.6L V6 Pentastar, 9-speed auto, gasoline. Not EPA-tested. Real-world avg ~16 MPG.",
+      "fuel_type": "Gasoline"
+    },
+    "23-Ram-Truck-3029": {
+      "mpg_combined": 16,
+      "source": "MFR+RW",
+      "epa_detail": "2023 Ram ProMaster cargo van, 3.6L V6 Pentastar, 9-speed auto, gasoline. Not EPA-tested. Real-world avg ~16 MPG.",
+      "fuel_type": "Gasoline"
+    },
+    "23-Ram-Truck-3660": {
+      "mpg_combined": 16,
+      "source": "MFR+RW",
+      "epa_detail": "2023 Ram ProMaster cargo van, 3.6L V6 Pentastar, 9-speed auto, gasoline. Not EPA-tested. Real-world avg ~16 MPG.",
+      "fuel_type": "Gasoline"
+    },
+    "23-Ram-Truck-4554": {
+      "mpg_combined": 16,
+      "source": "MFR+RW",
+      "epa_detail": "2023 Ram ProMaster cargo van, 3.6L V6 Pentastar, 9-speed auto, gasoline. Not EPA-tested. Real-world avg ~16 MPG.",
+      "fuel_type": "Gasoline"
+    },
+    "23-Ram-Truck-4556": {
+      "mpg_combined": 16,
+      "source": "MFR+RW",
+      "epa_detail": "2023 Ram ProMaster cargo van, 3.6L V6 Pentastar, 9-speed auto, gasoline. Not EPA-tested. Real-world avg ~16 MPG.",
+      "fuel_type": "Gasoline"
+    },
+    "23-Ram-Truck-5262": {
+      "mpg_combined": 16,
+      "source": "MFR+RW",
+      "epa_detail": "2023 Ram ProMaster cargo van, 3.6L V6 Pentastar, 9-speed auto, gasoline. Not EPA-tested. Real-world avg ~16 MPG.",
+      "fuel_type": "Gasoline"
+    },
+    "23-Ram-Truck-7541": {
+      "mpg_combined": 16,
+      "source": "MFR+RW",
+      "epa_detail": "2023 Ram ProMaster cargo van, 3.6L V6 Pentastar, 9-speed auto, gasoline. Not EPA-tested. Real-world avg ~16 MPG.",
+      "fuel_type": "Gasoline"
+    },
+    "23-Ram-Truck-8728": {
+      "mpg_combined": 16,
+      "source": "MFR+RW",
+      "epa_detail": "2023 Ram ProMaster cargo van, 3.6L V6 Pentastar, 9-speed auto, gasoline. Not EPA-tested. Real-world avg ~16 MPG.",
+      "fuel_type": "Gasoline"
+    },
+    "23-Ram-Truck-9586": {
+      "mpg_combined": 16,
+      "source": "MFR+RW",
+      "epa_detail": "2023 Ram ProMaster cargo van, 3.6L V6 Pentastar, 9-speed auto, gasoline. Not EPA-tested. Real-world avg ~16 MPG.",
+      "fuel_type": "Gasoline"
+    },
+    "23-Ram-Truck-9587": {
+      "mpg_combined": 16,
+      "source": "MFR+RW",
+      "epa_detail": "2023 Ram ProMaster cargo van, 3.6L V6 Pentastar, 9-speed auto, gasoline. Not EPA-tested. Real-world avg ~16 MPG.",
+      "fuel_type": "Gasoline"
+    },
+    "23-Ram-Truck-9588": {
+      "mpg_combined": 16,
+      "source": "MFR+RW",
+      "epa_detail": "2023 Ram ProMaster cargo van, 3.6L V6 Pentastar, 9-speed auto, gasoline. Not EPA-tested. Real-world avg ~16 MPG.",
+      "fuel_type": "Gasoline"
+    },
+    "23-Ram-Van-1504": {
+      "mpg_combined": 16,
+      "source": "MFR+RW",
+      "epa_detail": "2023 Ram ProMaster cargo van, 3.6L V6 Pentastar, 9-speed auto, gasoline. Not EPA-tested. Real-world avg ~16 MPG.",
+      "fuel_type": "Gasoline"
+    },
+    "23-Ram-Van-1505": {
+      "mpg_combined": 16,
+      "source": "MFR+RW",
+      "epa_detail": "2023 Ram ProMaster cargo van, 3.6L V6 Pentastar, 9-speed auto, gasoline. Not EPA-tested. Real-world avg ~16 MPG.",
+      "fuel_type": "Gasoline"
+    },
+    "23-Ram-Van-1511": {
+      "mpg_combined": 16,
+      "source": "MFR+RW",
+      "epa_detail": "2023 Ram ProMaster cargo van, 3.6L V6 Pentastar, 9-speed auto, gasoline. Not EPA-tested. Real-world avg ~16 MPG.",
+      "fuel_type": "Gasoline"
+    },
+    "23-Ram-Van-1520": {
+      "mpg_combined": 16,
+      "source": "MFR+RW",
+      "epa_detail": "2023 Ram ProMaster cargo van, 3.6L V6 Pentastar, 9-speed auto, gasoline. Not EPA-tested. Real-world avg ~16 MPG.",
+      "fuel_type": "Gasoline"
+    },
+    "23-Ram-Van-1521": {
+      "mpg_combined": 16,
+      "source": "MFR+RW",
+      "epa_detail": "2023 Ram ProMaster cargo van, 3.6L V6 Pentastar, 9-speed auto, gasoline. Not EPA-tested. Real-world avg ~16 MPG.",
+      "fuel_type": "Gasoline"
+    },
+    "23-Ram-Van-1522": {
+      "mpg_combined": 16,
+      "source": "MFR+RW",
+      "epa_detail": "2023 Ram ProMaster cargo van, 3.6L V6 Pentastar, 9-speed auto, gasoline. Not EPA-tested. Real-world avg ~16 MPG.",
+      "fuel_type": "Gasoline"
+    },
+    "23-Ram-Van-3653": {
+      "mpg_combined": 16,
+      "source": "MFR+RW",
+      "epa_detail": "2023 Ram ProMaster cargo van, 3.6L V6 Pentastar, 9-speed auto, gasoline. Not EPA-tested. Real-world avg ~16 MPG.",
+      "fuel_type": "Gasoline"
+    },
+    "23-Ram-Van-3665": {
+      "mpg_combined": 16,
+      "source": "MFR+RW",
+      "epa_detail": "2023 Ram ProMaster cargo van, 3.6L V6 Pentastar, 9-speed auto, gasoline. Not EPA-tested. Real-world avg ~16 MPG.",
+      "fuel_type": "Gasoline"
+    },
+    "23-Ram-Van-3669": {
+      "mpg_combined": 16,
+      "source": "MFR+RW",
+      "epa_detail": "2023 Ram ProMaster cargo van, 3.6L V6 Pentastar, 9-speed auto, gasoline. Not EPA-tested. Real-world avg ~16 MPG.",
+      "fuel_type": "Gasoline"
+    },
+    "23-Ram-Van-3674": {
+      "mpg_combined": 16,
+      "source": "MFR+RW",
+      "epa_detail": "2023 Ram ProMaster cargo van, 3.6L V6 Pentastar, 9-speed auto, gasoline. Not EPA-tested. Real-world avg ~16 MPG.",
+      "fuel_type": "Gasoline"
+    },
+    "23-Ram-Van-3682": {
+      "mpg_combined": 16,
+      "source": "MFR+RW",
+      "epa_detail": "2023 Ram ProMaster cargo van, 3.6L V6 Pentastar, 9-speed auto, gasoline. Not EPA-tested. Real-world avg ~16 MPG.",
+      "fuel_type": "Gasoline"
+    },
+    "23-Ram-Van-4553": {
+      "mpg_combined": 16,
+      "source": "MFR+RW",
+      "epa_detail": "2023 Ram ProMaster cargo van, 3.6L V6 Pentastar, 9-speed auto, gasoline. Not EPA-tested. Real-world avg ~16 MPG.",
+      "fuel_type": "Gasoline"
+    },
+    "23-Ram-Van-4555": {
+      "mpg_combined": 16,
+      "source": "MFR+RW",
+      "epa_detail": "2023 Ram ProMaster cargo van, 3.6L V6 Pentastar, 9-speed auto, gasoline. Not EPA-tested. Real-world avg ~16 MPG.",
+      "fuel_type": "Gasoline"
+    },
+    "23-Ram-Van-5260": {
+      "mpg_combined": 16,
+      "source": "MFR+RW",
+      "epa_detail": "2023 Ram ProMaster cargo van, 3.6L V6 Pentastar, 9-speed auto, gasoline. Not EPA-tested. Real-world avg ~16 MPG.",
+      "fuel_type": "Gasoline"
+    },
+    "23-Ram-Van-5263": {
+      "mpg_combined": 16,
+      "source": "MFR+RW",
+      "epa_detail": "2023 Ram ProMaster cargo van, 3.6L V6 Pentastar, 9-speed auto, gasoline. Not EPA-tested. Real-world avg ~16 MPG.",
+      "fuel_type": "Gasoline"
+    },
+    "23-Ram-Van-5265": {
+      "mpg_combined": 16,
+      "source": "MFR+RW",
+      "epa_detail": "2023 Ram ProMaster cargo van, 3.6L V6 Pentastar, 9-speed auto, gasoline. Not EPA-tested. Real-world avg ~16 MPG.",
+      "fuel_type": "Gasoline"
+    },
+    "23-Ram-Van-5465": {
+      "mpg_combined": 16,
+      "source": "MFR+RW",
+      "epa_detail": "2023 Ram ProMaster cargo van, 3.6L V6 Pentastar, 9-speed auto, gasoline. Not EPA-tested. Real-world avg ~16 MPG.",
+      "fuel_type": "Gasoline"
+    },
+    "23-Ram-Van-6741": {
+      "mpg_combined": 16,
+      "source": "MFR+RW",
+      "epa_detail": "2023 Ram ProMaster cargo van, 3.6L V6 Pentastar, 9-speed auto, gasoline. Not EPA-tested. Real-world avg ~16 MPG.",
+      "fuel_type": "Gasoline"
+    },
+    "23-Ram-Van-6743": {
+      "mpg_combined": 16,
+      "source": "MFR+RW",
+      "epa_detail": "2023 Ram ProMaster cargo van, 3.6L V6 Pentastar, 9-speed auto, gasoline. Not EPA-tested. Real-world avg ~16 MPG.",
+      "fuel_type": "Gasoline"
+    },
+    "23-Ram-Van-6747": {
+      "mpg_combined": 16,
+      "source": "MFR+RW",
+      "epa_detail": "2023 Ram ProMaster cargo van, 3.6L V6 Pentastar, 9-speed auto, gasoline. Not EPA-tested. Real-world avg ~16 MPG.",
+      "fuel_type": "Gasoline"
+    },
+    "23-Ram-Van-6748": {
+      "mpg_combined": 16,
+      "source": "MFR+RW",
+      "epa_detail": "2023 Ram ProMaster cargo van, 3.6L V6 Pentastar, 9-speed auto, gasoline. Not EPA-tested. Real-world avg ~16 MPG.",
+      "fuel_type": "Gasoline"
+    },
+    "23-Ram-Van-6751": {
+      "mpg_combined": 16,
+      "source": "MFR+RW",
+      "epa_detail": "2023 Ram ProMaster cargo van, 3.6L V6 Pentastar, 9-speed auto, gasoline. Not EPA-tested. Real-world avg ~16 MPG.",
+      "fuel_type": "Gasoline"
+    },
+    "23-Ram-Van-6760": {
+      "mpg_combined": 16,
+      "source": "MFR+RW",
+      "epa_detail": "2023 Ram ProMaster cargo van, 3.6L V6 Pentastar, 9-speed auto, gasoline. Not EPA-tested. Real-world avg ~16 MPG.",
+      "fuel_type": "Gasoline"
+    },
+    "23-Ram-Van-6762": {
+      "mpg_combined": 16,
+      "source": "MFR+RW",
+      "epa_detail": "2023 Ram ProMaster cargo van, 3.6L V6 Pentastar, 9-speed auto, gasoline. Not EPA-tested. Real-world avg ~16 MPG.",
+      "fuel_type": "Gasoline"
+    },
+    "24-Ford-Truck-5970": {
+      "mpg_combined": 15,
+      "source": "MFR",
+      "epa_detail": "2024 Ford F-350 Super Duty, 6.2L V8 or 7.3L V8, gasoline. Not EPA-tested (GVWR > 8,500 lbs). Manufacturer est. 13-17 MPG combined.",
+      "fuel_type": "Gasoline"
+    },
+    "24-Ford-Van-4345": {
+      "mpg_combined": 16,
+      "source": "MFR+RW",
+      "epa_detail": "2024 Ford Transit cargo van, 3.5L V6, Flex Fuel (gasoline baseline). Not EPA-tested. Est. ~16 combined.",
+      "fuel_type": "Flex Fuel"
+    },
+    "24-Ford-Van-4603": {
+      "mpg_combined": 16,
+      "source": "MFR+RW",
+      "epa_detail": "2024 Ford Transit cargo van, 3.5L V6, Flex Fuel (gasoline baseline). Not EPA-tested. Est. ~16 combined.",
+      "fuel_type": "Flex Fuel"
+    },
+    "24-Ford-Van-4629": {
+      "mpg_combined": 16,
+      "source": "MFR+RW",
+      "epa_detail": "2024 Ford Transit cargo van, 3.5L V6, Flex Fuel (gasoline baseline). Not EPA-tested. Est. ~16 combined.",
+      "fuel_type": "Flex Fuel"
+    },
+    "24-Ford-Van-4656": {
+      "mpg_combined": 16,
+      "source": "MFR+RW",
+      "epa_detail": "2024 Ford Transit cargo van, 3.5L V6, Flex Fuel (gasoline baseline). Not EPA-tested. Est. ~16 combined.",
+      "fuel_type": "Flex Fuel"
+    },
+    "24-Ford-Van-7347": {
+      "mpg_combined": 16,
+      "source": "MFR+RW",
+      "epa_detail": "2024 Ford Transit cargo van, 3.5L V6, Flex Fuel (gasoline baseline). Not EPA-tested. Est. ~16 combined.",
+      "fuel_type": "Flex Fuel"
+    },
+    "24-Mercedes-Van-0253": {
+      "mpg_combined": 18,
+      "source": "MFR+RW",
+      "epa_detail": "2024 Mercedes-Benz Sprinter 2500, 2.0L 4cyl turbo diesel (B20). Not EPA-tested. Manufacturer 14 city/20 hwy. Real-world avg 17.7 MPG (Fuelly). Est. ~18 combined.",
+      "fuel_type": "Diesel"
+    },
+    "24-Ram-Truck-0821": {
+      "mpg_combined": 16,
+      "source": "MFR+RW",
+      "epa_detail": "2024 Ram ProMaster cargo van, 3.6L V6 Pentastar, 9-speed auto, gasoline. Not EPA-tested. Real-world avg ~16 MPG.",
+      "fuel_type": "Gasoline"
+    },
+    "24-Ram-Truck-0822": {
+      "mpg_combined": 16,
+      "source": "MFR+RW",
+      "epa_detail": "2024 Ram ProMaster cargo van, 3.6L V6 Pentastar, 9-speed auto, gasoline. Not EPA-tested. Real-world avg ~16 MPG.",
+      "fuel_type": "Gasoline"
+    },
+    "24-Ram-Truck-0823": {
+      "mpg_combined": 16,
+      "source": "MFR+RW",
+      "epa_detail": "2024 Ram ProMaster cargo van, 3.6L V6 Pentastar, 9-speed auto, gasoline. Not EPA-tested. Real-world avg ~16 MPG.",
+      "fuel_type": "Gasoline"
+    },
+    "25-Ford-Van-0389": {
+      "mpg_combined": 16,
+      "source": "MFR+RW",
+      "epa_detail": "2025 Ford Transit cargo van, 3.5L V6, gasoline. Not EPA-tested. Est. ~16 combined (unchanged powertrain from 2024).",
+      "fuel_type": "Gasoline"
+    },
+    "25-Toyota-Truck-0664": {
+      "mpg_combined": 22,
+      "source": "EPA",
+      "epa_detail": "2025 Toyota Tacoma SR5/Sport/PreRunner 2WD, 2.4L 4cyl turbo, Regular gasoline. EPA: 20/24/22.",
+      "fuel_type": "Gasoline"
+    },
+    "25-Toyota-Truck-2541": {
+      "mpg_combined": 22,
+      "source": "EPA",
+      "epa_detail": "2025 Toyota Tacoma SR5/Sport/PreRunner 2WD, 2.4L 4cyl turbo, Regular gasoline. EPA: 20/24/22.",
+      "fuel_type": "Gasoline"
+    },
+    "25-Toyota-Truck-8485": {
+      "mpg_combined": 22,
+      "source": "EPA",
+      "epa_detail": "2025 Toyota Tacoma SR5/Sport/PreRunner 2WD, 2.4L 4cyl turbo, Regular gasoline. EPA: 20/24/22.",
+      "fuel_type": "Gasoline"
+    },
+    "99-Isuzu-Box-2245": {
+      "mpg_combined": 12,
+      "source": "MFR+RW",
+      "epa_detail": "Isuzu NPR box truck, diesel. Not EPA-tested. Manufacturer est. ~14 MPG, real-world 10-14 MPG loaded. Using 12 as midpoint.",
+      "fuel_type": "Diesel"
+    },
+    "Trailer-25-Cross-6308": {
+      "mpg_combined": null,
+      "source": "N/A",
+      "epa_detail": "Trailer - no fuel consumption. Excluded from fuel analysis.",
+      "fuel_type": null
+    }
+  }
+}

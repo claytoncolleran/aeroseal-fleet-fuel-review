@@ -1,0 +1,340 @@
+{% extends "base.html" %}
+{% block title %}{{ group_name }}{% endblock %}
+{% block content %}
+<div class="page-header">
+  <p style="margin-bottom: 4px;"><a href="/">&larr; Back to Dashboard</a></p>
+  <h1>{{ group_name }}</h1>
+  <p>Fleet manager review &mdash; review all flagged items, then submit</p>
+</div>
+
+<div class="stats-row">
+  <div class="stat-card">
+    <div class="stat-number">{{ group_summary.get('total_txns', 0) }}</div>
+    <div class="stat-label">Transactions</div>
+  </div>
+  <div class="stat-card warn">
+    <div class="stat-number">{{ group_summary.get('flagged_txns', 0) }}</div>
+    <div class="stat-label">Flagged</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-number">${{ "{:,.2f}".format(group_summary.get('total_spend', 0)) }}</div>
+    <div class="stat-label">Total Spend</div>
+  </div>
+  <div class="stat-card accent">
+    <div class="stat-number" id="reviewed-count">0</div>
+    <div class="stat-label">Reviewed</div>
+  </div>
+</div>
+
+<!-- ═══ Vehicle Transactions ═══ -->
+<div class="section-label">
+  <div class="section-icon" style="background: var(--aeroseal-sapphire);">&#9679;</div>
+  Vehicle Transactions
+</div>
+
+{% for vname, vdata in vehicles|dictsort %}
+{% set ms = mpg_summary.get(vname, {}) %}
+<div class="vehicle-section">
+  <div class="vehicle-header" onclick="toggleVehicle(this)">
+    <div style="display: flex; align-items: center; gap: 12px;">
+      <h3>{{ vname }}</h3>
+      {% if ms.get('period_mpg') %}
+        {% set pct = ms.get('pct_diff', 0) or 0 %}
+        {% if ms.get('flagged') %}
+          <span class="mpg-badge mpg-bad">{{ ms.period_mpg }} MPG ({{ "%+.0f"|format(pct) }}%)</span>
+        {% elif pct >= -10 %}
+          <span class="mpg-badge mpg-good">{{ ms.period_mpg }} MPG</span>
+        {% else %}
+          <span class="mpg-badge mpg-ok">{{ ms.period_mpg }} MPG ({{ "%+.0f"|format(pct) }}%)</span>
+        {% endif %}
+      {% elif ms.get('needs_review') %}
+        <span class="mpg-badge mpg-ok" title="Odometer data needs manual review">MPG: Review Needed</span>
+      {% endif %}
+    </div>
+    <div style="display: flex; align-items: center; gap: 12px;">
+      <span style="font-size: 13px; color: #5A6B7B;">
+        {{ vdata.transactions|length }} txns
+        {% if vdata.flag_count > 0 %}&middot; <span style="color: #E8672A;">{{ vdata.flag_count }} flags</span>{% endif %}
+      </span>
+      <svg class="chevron" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 4l6 6-6 6"/></svg>
+    </div>
+  </div>
+  <div class="vehicle-body">
+    {% if ms.get('flagged') %}
+    <div class="section-banner banner-warn" style="margin: 12px 0;">
+      <span class="flag-badge flag-1">F1</span>&nbsp;
+      {{ ms.get('reason', '') }}
+    </div>
+    {% elif ms.get('needs_review') %}
+    <div class="section-banner banner-info" style="margin: 12px 0;">
+      This vehicle's odometer data contains inconsistencies that prevent reliable MPG calculation. Manual review recommended.
+    </div>
+    {% elif ms.get('period_mpg') %}
+    <div style="padding: 8px 12px; font-size: 13px; color: #5A6B7B; background: #F8FAFB; border-radius: 4px; margin: 12px 0;">
+      Period MPG: <strong>{{ ms.period_mpg }}</strong> over {{ "{:,}".format(ms.total_miles) }} miles / {{ ms.total_gallons }} gallons ({{ ms.fill_count }} fills)
+      {% if ms.baseline_mpg %} &middot; Baseline: {{ ms.baseline_mpg }} MPG{% endif %}
+    </div>
+    {% endif %}
+    <table class="txn-table">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Driver</th>
+          <th>Vendor</th>
+          <th>Gallons</th>
+          <th>Cost</th>
+          <th>$/Gal</th>
+          <th>Odometer</th>
+          <th>Product</th>
+          <th>Flags</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for txn in vdata.transactions %}
+        {% set txn_key = vname ~ "_" ~ txn.transaction_date ~ "_" ~ txn.transaction_time %}
+        {% set existing = decisions.get(txn_key, {}) %}
+        <tr class="{% if txn.flag_count > 0 %}flagged{% endif %}" id="row-{{ loop.index0 }}-{{ vname|replace(' ','-') }}">
+          <td style="white-space: nowrap;">{{ txn.transaction_date }}<br><span style="color: #999; font-size: 11px;">{{ txn.transaction_time }}</span></td>
+          <td>{{ txn.driver or '—' }}</td>
+          <td style="max-width: 160px; overflow: hidden; text-overflow: ellipsis;">{{ txn.vendor or '—' }}</td>
+          <td>{{ "%.1f"|format(txn.gallons) if txn.gallons else '—' }}</td>
+          <td>${{ "%.2f"|format(txn.net_price) if txn.net_price else '—' }}</td>
+          <td>{{ "$%.3f"|format(txn.gross_ppg) if txn.gross_ppg else '—' }}</td>
+          <td>{{ "{:,.0f}".format(txn.odometer) if txn.odometer else '—' }}</td>
+          <td style="font-size: 11px;">{{ txn.product or '—' }}</td>
+          <td>
+            {% if txn.flags %}
+              {% for flag in txn.flags %}
+                <span class="flag-badge flag-{{ flag.flag }}">F{{ flag.flag }}</span>
+              {% endfor %}
+              {% for flag in txn.flags %}
+                <div class="flag-detail flag-{{ flag.flag }}-detail">{{ flag.reason }}</div>
+              {% endfor %}
+            {% else %}
+              <span style="color: #999;">—</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if txn.flag_count > 0 %}
+              <div class="decision-row" data-txn-key="{{ txn_key }}">
+                {% if existing.get('action') == 'approve' %}
+                  <span class="decision-status decision-approved">Approved</span>
+                {% elif existing.get('action') == 'deny' %}
+                  <span class="decision-status decision-denied">Denied: {{ existing.get('reason', '') }}</span>
+                {% else %}
+                  <button class="btn btn-approve btn-sm" onclick="submitDecision(this, '{{ txn_key }}', 'approve')">Approve</button>
+                  <button class="btn btn-deny btn-sm" onclick="showDenyReason(this, '{{ txn_key }}')">Deny</button>
+                  <input class="deny-reason" type="text" placeholder="Reason for denial..." data-key="{{ txn_key }}"
+                         onkeydown="if(event.key==='Enter')submitDeny(this,'{{ txn_key }}')">
+                {% endif %}
+              </div>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endfor %}
+
+<!-- ═══ Temporary Card Section ═══ -->
+{% if temp_cards %}
+<div class="section-label">
+  <div class="section-icon temp-icon">T</div>
+  Temporary Card Usage — Requires Approval
+</div>
+<div class="section-banner banner-temp">
+  <strong>{{ temp_cards|length }} temporary card transactions</strong> were recorded this period.
+  These cards are not assigned to a specific Fleetio vehicle. Please review and approve.
+</div>
+<div class="card">
+  <table class="txn-table">
+    <thead>
+      <tr>
+        <th>Date</th>
+        <th>Cardholder</th>
+        <th>Driver</th>
+        <th>Vendor</th>
+        <th>Gallons</th>
+        <th>Cost</th>
+        <th>$/Gal</th>
+        <th>Product</th>
+        <th>Action</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for txn in temp_cards %}
+      {% set txn_key = "TEMP_" ~ txn.cardholder ~ "_" ~ txn.transaction_date ~ "_" ~ txn.transaction_time %}
+      {% set existing = decisions.get(txn_key, {}) %}
+      <tr class="flagged">
+        <td style="white-space: nowrap;">{{ txn.transaction_date }}<br><span style="color: #999; font-size: 11px;">{{ txn.transaction_time }}</span></td>
+        <td>{{ txn.cardholder or '—' }}</td>
+        <td>{{ txn.driver or '—' }}</td>
+        <td style="max-width: 160px;">{{ txn.vendor or '—' }}</td>
+        <td>{{ "%.1f"|format(txn.gallons) if txn.gallons else '—' }}</td>
+        <td>${{ "%.2f"|format(txn.net_price) if txn.net_price else '—' }}</td>
+        <td>{{ "$%.3f"|format(txn.gross_ppg) if txn.gross_ppg else '—' }}</td>
+        <td style="font-size: 11px;">{{ txn.product or '—' }}</td>
+        <td>
+          <div class="decision-row" data-txn-key="{{ txn_key }}">
+            {% if existing.get('action') == 'approve' %}
+              <span class="decision-status decision-approved">Approved</span>
+            {% elif existing.get('action') == 'deny' %}
+              <span class="decision-status decision-denied">Denied: {{ existing.get('reason', '') }}</span>
+            {% else %}
+              <button class="btn btn-approve btn-sm" onclick="submitDecision(this, '{{ txn_key }}', 'approve')">Approve</button>
+              <button class="btn btn-deny btn-sm" onclick="showDenyReason(this, '{{ txn_key }}')">Deny</button>
+              <input class="deny-reason" type="text" placeholder="Reason..." data-key="{{ txn_key }}"
+                     onkeydown="if(event.key==='Enter')submitDeny(this,'{{ txn_key }}')">
+            {% endif %}
+          </div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
+<!-- ═══ Declined Transaction Section ═══ -->
+{% if declined %}
+<div class="section-label">
+  <div class="section-icon declined-icon">!</div>
+  Declined Transactions — Acknowledgment Required
+</div>
+<div class="section-banner banner-warn">
+  <strong>{{ declined|length }} transactions were declined</strong> during this period.
+  Please review and acknowledge.
+</div>
+<div class="card">
+  <table class="txn-table">
+    <thead>
+      <tr>
+        <th>Date</th>
+        <th>Vehicle / Card</th>
+        <th>Driver</th>
+        <th>Vendor</th>
+        <th>Amount</th>
+        <th>Card Type</th>
+        <th>Action</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for txn in declined %}
+      {% set txn_key = "DECLINED_" ~ (txn.vehicle_name or txn.cardholder) ~ "_" ~ txn.transaction_date ~ "_" ~ txn.transaction_time %}
+      {% set existing = decisions.get(txn_key, {}) %}
+      <tr class="flagged">
+        <td style="white-space: nowrap;">{{ txn.transaction_date }}<br><span style="color: #999; font-size: 11px;">{{ txn.transaction_time }}</span></td>
+        <td>{{ txn.vehicle_name or txn.cardholder or '—' }}</td>
+        <td>{{ txn.driver or '—' }}</td>
+        <td style="max-width: 160px;">{{ txn.vendor or '—' }}</td>
+        <td>${{ "%.2f"|format(txn.gross_price) if txn.gross_price else '—' }}</td>
+        <td><span style="font-size: 11px; text-transform: uppercase; color: #C62828; font-weight: 600;">{{ txn.card_type }}</span></td>
+        <td>
+          <div class="decision-row" data-txn-key="{{ txn_key }}">
+            {% if existing.get('action') %}
+              <span class="decision-status decision-approved">Acknowledged</span>
+            {% else %}
+              <button class="btn btn-approve btn-sm" onclick="submitDecision(this, '{{ txn_key }}', 'approve')">Acknowledge</button>
+            {% endif %}
+          </div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
+<!-- ═══ Submit Bar ═══ -->
+<div class="submit-bar">
+  <div class="submit-progress">
+    <strong id="progress-count">0</strong> of <strong id="progress-total">0</strong> flagged items reviewed
+  </div>
+  <div style="display: flex; align-items: center; gap: 12px;">
+    <input type="text" id="manager-name" class="deny-reason visible" placeholder="Fleet Manager Name" style="width: 200px;">
+    <button class="btn-submit" id="submit-btn" disabled onclick="submitGroup()">Submit Review</button>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const GROUP_NAME = "{{ group_name }}";
+let totalFlagged = 0;
+let reviewed = 0;
+
+document.addEventListener('DOMContentLoaded', () => {
+  // Count all decision rows (flagged items + temp + declined needing action)
+  const rows = document.querySelectorAll('.decision-row');
+  const needsAction = [...rows].filter(r => !r.querySelector('.decision-status'));
+  const alreadyDone = [...rows].filter(r => r.querySelector('.decision-status'));
+  totalFlagged = rows.length;
+  reviewed = alreadyDone.length;
+  updateProgress();
+});
+
+function updateProgress() {
+  document.getElementById('progress-count').textContent = reviewed;
+  document.getElementById('progress-total').textContent = totalFlagged;
+  document.getElementById('reviewed-count').textContent = reviewed;
+  const btn = document.getElementById('submit-btn');
+  const nameInput = document.getElementById('manager-name');
+  btn.disabled = !(reviewed >= totalFlagged && totalFlagged > 0 && nameInput.value.trim());
+}
+
+document.getElementById('manager-name').addEventListener('input', updateProgress);
+
+function toggleVehicle(el) {
+  const body = el.nextElementSibling;
+  const chevron = el.querySelector('.chevron');
+  body.classList.toggle('open');
+  chevron.classList.toggle('open');
+}
+
+function submitDecision(btn, txnKey, action, reason='') {
+  fetch('/api/submit-decision', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({group_name: GROUP_NAME, txn_key: txnKey, action: action, reason: reason})
+  }).then(r => r.json()).then(data => {
+    const row = btn.closest('.decision-row');
+    if (action === 'approve') {
+      row.innerHTML = '<span class="decision-status decision-approved">Approved</span>';
+    } else {
+      row.innerHTML = '<span class="decision-status decision-denied">Denied: ' + reason + '</span>';
+    }
+    reviewed++;
+    updateProgress();
+  });
+}
+
+function showDenyReason(btn, txnKey) {
+  const input = btn.parentElement.querySelector('.deny-reason');
+  input.classList.add('visible');
+  input.focus();
+}
+
+function submitDeny(input, txnKey) {
+  const reason = input.value.trim();
+  if (!reason) { input.style.borderColor = '#C62828'; return; }
+  submitDecision(input, txnKey, 'deny', reason);
+}
+
+function submitGroup() {
+  const name = document.getElementById('manager-name').value.trim();
+  if (!name) return;
+  fetch('/api/submit-group', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({group_name: GROUP_NAME, manager_name: name})
+  }).then(r => r.json()).then(data => {
+    document.getElementById('submit-btn').textContent = 'Submitted';
+    document.getElementById('submit-btn').disabled = true;
+    document.getElementById('submit-btn').style.background = '#2E7D32';
+  });
+}
+</script>
+{% endblock %}

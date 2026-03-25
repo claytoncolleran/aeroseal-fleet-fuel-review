@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1>Fuel Review Dashboard</h1>
+  <p>Monthly fuel transaction review and approval workflow &mdash; {{ summary.get("total_vehicle_transactions_analyzed", 0) }} transactions analyzed</p>
+</div>
+
+<div class="stats-row">
+  <div class="stat-card">
+    <div class="stat-number">{{ summary.get("total_vehicle_transactions_analyzed", 0) }}</div>
+    <div class="stat-label">Transactions</div>
+  </div>
+  <div class="stat-card warn">
+    <div class="stat-number">{{ summary.get("total_flagged_transactions", 0) }}</div>
+    <div class="stat-label">Flagged</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-number">{{ summary.get("total_flags", 0) }}</div>
+    <div class="stat-label">Total Flags</div>
+  </div>
+  <div class="stat-card accent">
+    <div class="stat-number">{{ summary.get("total_fill_events", 0) }}</div>
+    <div class="stat-label">Fill Events</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-number">{{ summary.get("temporary_card_transactions", 0) }}</div>
+    <div class="stat-label">Temp Cards</div>
+  </div>
+  <div class="stat-card warn">
+    <div class="stat-number">{{ summary.get("declined_transactions", 0) }}</div>
+    <div class="stat-label">Declined</div>
+  </div>
+</div>
+
+<div class="section-banner banner-info">
+  <strong>Flag Legend:</strong>&nbsp;
+  <span class="flag-badge flag-1">F1</span> Fuel Efficiency &nbsp;
+  <span class="flag-badge flag-2">F2</span> Cost/Gallon &nbsp;
+  <span class="flag-badge flag-3">F3</span> Odometer Issue &nbsp;
+  <span class="flag-badge flag-4">F4</span> Small Fill &nbsp;
+  <span class="flag-badge flag-5">F5</span> High Frequency &nbsp;
+  <span class="flag-badge flag-6">F6</span> Wrong Fuel
+</div>
+
+<h2 style="font-size: 18px; font-weight: 700; color: var(--aeroseal-steel-blue); margin: 24px 0 16px;">Fleet Groups</h2>
+
+{% for group in groups %}
+{% set gs = group_summary.get(group, {}) %}
+<a href="/group/{{ group }}" style="text-decoration: none;">
+  <div class="group-status-card {% if gs.get('flagged_txns', 0) > 0 %}pending{% endif %}" style="cursor: pointer;">
+    <div>
+      <h3 style="font-size: 16px; font-weight: 600; color: var(--aeroseal-midnight-blue); margin-bottom: 4px;">{{ group }}</h3>
+      <div style="font-size: 13px; color: #5A6B7B;">
+        {{ gs.get('total_txns', 0) }} transactions &middot;
+        {{ gs.get('flagged_txns', 0) }} flagged &middot;
+        ${{ "{:,.2f}".format(gs.get('total_spend', 0)) }} total spend
+        {% if gs.get('flag_types') %}
+        &middot;
+        {% for f in gs.get('flag_types', []) %}
+          <span class="flag-badge flag-{{ f }}" style="font-size: 10px;">F{{ f }}</span>
+        {% endfor %}
+        {% endif %}
+      </div>
+    </div>
+    <svg class="chevron" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 4l6 6-6 6"/></svg>
+  </div>
+</a>
+{% endfor %}
+{% endblock %}
