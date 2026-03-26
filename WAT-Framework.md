@@ -71,13 +71,23 @@ Stay pragmatic. Stay reliable. Keep learning.
 
 ## Project: Fuel Review
 
-This project manages fuel usage review and analysis for Aeroseal's fleet. The goal is to track, analyze, and report on fuel consumption patterns across the fleet to identify anomalies, optimize costs, and ensure accountability.
+This project manages fuel usage review and analysis for Aeroseal's fleet. Ingests monthly Corpay fuel card exports, cross-references against Fleetio vehicle and fleet group data, flags anomalies for review, and routes approvals: Fleet Manager → Fleet Administrator → Accounting.
 
 ### Tools (in `tools/`)
-- *(No tools yet — build as workflows require them)*
+- `anomaly_detection.py` — Core engine. Loads Corpay data, pulls Fleetio vehicles via API, matches transactions, runs 6 anomaly flags (vehicle-level MPG, cost/gallon outliers, odometer validation, small fills, high-frequency fills, wrong fuel type), outputs `anomaly_report.json`.
 
 ### Data (in `data/`)
-- *(No data yet — will be populated as fuel data sources are connected)*
+- `Corpay_Transactions.xlsx` — Monthly Corpay fuel card export (source data — never overwrite)
+- `anomaly_report.json` — Generated output from anomaly detection engine, consumed by the web app
+- `mpg_baselines.json` — EPA + manufacturer MPG baselines for 101 fleet vehicles
+
+### Web App
+- `app.py` — Flask server (port 5001). Dashboard, fleet manager review views, admin drill-down, consolidated accounting report (print-to-PDF). Aeroseal-branded UI.
+- `templates/` — Jinja2 HTML templates (base, index, group, admin, admin_group, report)
 
 ### Workflows (in `workflows/`)
 - `_template.md` — Standard workflow template for creating new SOPs
+
+### Credentials
+- `.env` — Fleetio API key and account token (gitignored, never commit)
+- Fleetio API: `https://secure.fleetio.com/api/v1` with `Authorization: Token {key}` + `Account-Token: {token}`
