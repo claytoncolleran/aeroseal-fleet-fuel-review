@@ -278,7 +278,9 @@ def compute_vehicle_period_mpg(fill_events, baselines):
         for event in events:
             odo = event["odometer"]
             gallons = event["total_gallons"]
-            if gallons and gallons > 0:
+            # Skip Corpay default (1.0 gal with no odometer) from totals
+            is_default = (gallons == 1.0 and odo is None)
+            if gallons and gallons > 0 and not is_default:
                 total_gallons += gallons
                 fill_count += 1
             if odo is not None and odo > 0:
@@ -624,9 +626,12 @@ def run():
         print(f"    {cat}: ${med:.3f} ({len(fuel_prices[cat])} transactions)")
 
     # Flag 4: Average fill size per vehicle (using fill events, not raw txns)
+    # Exclude 1.0-gallon Corpay defaults (no odometer entered) from the average
     vehicle_avg_fill = {}
     for vname, events in fill_events.items():
-        fill_sizes = [ev["total_gallons"] for ev in events if ev["total_gallons"] > 0]
+        fill_sizes = [ev["total_gallons"] for ev in events
+                      if ev["total_gallons"] > 0
+                      and not (ev["total_gallons"] == 1.0 and ev["odometer"] is None)]
         if fill_sizes:
             vehicle_avg_fill[vname] = sum(fill_sizes) / len(fill_sizes)
 
@@ -668,10 +673,15 @@ def run():
             flags_for_txn.append(f2)
 
         # Flag 4: Small fill
+        # Skip when gallons == 1.0 and no odometer — Corpay defaults to 1 gal
+        # when mileage is not entered at the pump. Not a real fill amount.
         event_gallons = safe_float(row.get("Unit/Gallons"))
-        f4 = check_flag4(event_gallons, vehicle_avg_fill, vname)
-        if f4:
-            flags_for_txn.append(f4)
+        odo_value = safe_float(row.get("Odometer"))
+        is_corpay_default = (event_gallons == 1.0 and not odo_value)
+        if not is_corpay_default:
+            f4 = check_flag4(event_gallons, vehicle_avg_fill, vname)
+            if f4:
+                flags_for_txn.append(f4)
 
         # Flag 5: High frequency
         driver = row.get("Spender") or row.get("Cardholder Full Name") or "Unknown"

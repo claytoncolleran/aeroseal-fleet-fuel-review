@@ -1,6 +1,6 @@
 {
   "_metadata": {
-    "generated": "2026-03-25T18:13:16.211420",
+    "generated": "2026-03-26T06:15:52.538542",
     "corpay_file": "Corpay_Transactions.xlsx",
     "date_range": {
       "start": "2026-02-24",
@@ -18,12 +18,12 @@
     "total_fill_events": 413,
     "split_fills_combined": 15,
     "total_flagged_transactions": 210,
-    "total_flags": 343,
+    "total_flags": 287,
     "flags_by_type": {
       "flag_1_fuel_efficiency_vehicle_level": 20,
       "flag_2_cost_per_gallon_outlier": 19,
       "flag_3_odometer_issue": 89,
-      "flag_4_unusually_small_fill": 61,
+      "flag_4_unusually_small_fill": 5,
       "flag_5_high_frequency_fills": 104,
       "flag_6_wrong_fuel_type": 70
     },
@@ -77,7 +77,7 @@
       "period_mpg": null,
       "total_miles": 542221,
       "total_gallons": 105.0,
-      "fill_count": 14,
+      "fill_count": 13,
       "baseline_mpg": 15,
       "pct_diff": null,
       "flagged": false,
@@ -100,7 +100,7 @@
       "period_mpg": 8.4,
       "total_miles": 1642,
       "total_gallons": 196.1,
-      "fill_count": 19,
+      "fill_count": 16,
       "first_odo": 1025.0,
       "last_odo": 2667.0,
       "baseline_mpg": 16,
@@ -112,7 +112,7 @@
       "period_mpg": 15.1,
       "total_miles": 1315,
       "total_gallons": 87.1,
-      "fill_count": 7,
+      "fill_count": 6,
       "first_odo": 49778.0,
       "last_odo": 51093.0,
       "baseline_mpg": 16,
@@ -124,7 +124,7 @@
       "period_mpg": 12.5,
       "total_miles": 964,
       "total_gallons": 76.9,
-      "fill_count": 10,
+      "fill_count": 8,
       "first_odo": 82750.0,
       "last_odo": 83714.0,
       "baseline_mpg": 16,
@@ -148,7 +148,7 @@
       "period_mpg": null,
       "total_miles": 261011,
       "total_gallons": 73.9,
-      "fill_count": 20,
+      "fill_count": 14,
       "baseline_mpg": 16,
       "pct_diff": null,
       "flagged": false,
@@ -159,7 +159,7 @@
       "period_mpg": 11.7,
       "total_miles": 1398,
       "total_gallons": 119.4,
-      "fill_count": 11,
+      "fill_count": 9,
       "first_odo": 21772.0,
       "last_odo": 23170.0,
       "baseline_mpg": 16,
@@ -183,7 +183,7 @@
       "period_mpg": 12.7,
       "total_miles": 389,
       "total_gallons": 30.6,
-      "fill_count": 3,
+      "fill_count": 2,
       "first_odo": 133904.0,
       "last_odo": 134293.0,
       "baseline_mpg": 17,
@@ -195,7 +195,7 @@
       "period_mpg": 17.1,
       "total_miles": 753,
       "total_gallons": 44.1,
-      "fill_count": 5,
+      "fill_count": 4,
       "first_odo": 27779.0,
       "last_odo": 28532.0,
       "baseline_mpg": 16,
@@ -207,7 +207,7 @@
       "period_mpg": 12.5,
       "total_miles": 832,
       "total_gallons": 66.7,
-      "fill_count": 6,
+      "fill_count": 4,
       "first_odo": 10054.0,
       "last_odo": 10886.0,
       "baseline_mpg": 16,
@@ -219,7 +219,7 @@
       "period_mpg": 15.9,
       "total_miles": 2333,
       "total_gallons": 147.2,
-      "fill_count": 10,
+      "fill_count": 8,
       "first_odo": 110846.0,
       "last_odo": 113179.0,
       "baseline_mpg": 22,
@@ -231,7 +231,7 @@
       "period_mpg": 16.3,
       "total_miles": 1690,
       "total_gallons": 104.0,
-      "fill_count": 8,
+      "fill_count": 6,
       "first_odo": 22073.0,
       "last_odo": 23763.0,
       "baseline_mpg": 16,
@@ -279,7 +279,7 @@
       "period_mpg": 8.6,
       "total_miles": 852,
       "total_gallons": 99.4,
-      "fill_count": 9,
+      "fill_count": 7,
       "first_odo": 49352.0,
       "last_odo": 50204.0,
       "baseline_mpg": 16,
@@ -315,7 +315,7 @@
       "period_mpg": 15.4,
       "total_miles": 1078,
       "total_gallons": 70.1,
-      "fill_count": 10,
+      "fill_count": 8,
       "first_odo": 26406.0,
       "last_odo": 27484.0,
       "baseline_mpg": 16,
@@ -327,7 +327,7 @@
       "period_mpg": 17.1,
       "total_miles": 2097,
       "total_gallons": 122.8,
-      "fill_count": 10,
+      "fill_count": 9,
       "first_odo": 81438.0,
       "last_odo": 83535.0,
       "baseline_mpg": 15,
@@ -350,8 +350,8 @@
     "23-Ford-Van-4519": {
       "period_mpg": null,
       "total_miles": null,
-      "total_gallons": 128.0,
-      "fill_count": 9,
+      "total_gallons": 127.0,
+      "fill_count": 8,
       "baseline_mpg": 16,
       "pct_diff": null,
       "flagged": false,
@@ -361,7 +361,7 @@
       "period_mpg": 15.3,
       "total_miles": 3243,
       "total_gallons": 211.9,
-      "fill_count": 16,
+      "fill_count": 13,
       "first_odo": 30872.0,
       "last_odo": 34115.0,
       "baseline_mpg": 16,
@@ -373,7 +373,7 @@
       "period_mpg": 16.2,
       "total_miles": 1147,
       "total_gallons": 70.6,
-      "fill_count": 7,
+      "fill_count": 6,
       "first_odo": 91145.0,
       "last_odo": 92292.0,
       "baseline_mpg": 15,
@@ -385,7 +385,7 @@
       "period_mpg": 17.4,
       "total_miles": 1935,
       "total_gallons": 111.4,
-      "fill_count": 10,
+      "fill_count": 8,
       "first_odo": 41370.0,
       "last_odo": 43305.0,
       "baseline_mpg": 16,
@@ -408,8 +408,8 @@
     "23-Ram-Van-5263": {
       "period_mpg": null,
       "total_miles": null,
-      "total_gallons": 21.4,
-      "fill_count": 2,
+      "total_gallons": 20.4,
+      "fill_count": 1,
       "baseline_mpg": 16,
       "pct_diff": null,
       "flagged": false,
@@ -431,7 +431,7 @@
       "period_mpg": 14.2,
       "total_miles": 2837,
       "total_gallons": 199.3,
-      "fill_count": 11,
+      "fill_count": 10,
       "first_odo": 17545.0,
       "last_odo": 20382.0,
       "baseline_mpg": 16,
@@ -443,7 +443,7 @@
       "period_mpg": 12.0,
       "total_miles": 710,
       "total_gallons": 59.0,
-      "fill_count": 5,
+      "fill_count": 4,
       "first_odo": 23199.0,
       "last_odo": 23909.0,
       "baseline_mpg": 16,
@@ -467,7 +467,7 @@
       "period_mpg": 16.2,
       "total_miles": 1314,
       "total_gallons": 81.4,
-      "fill_count": 7,
+      "fill_count": 6,
       "first_odo": 54231.0,
       "last_odo": 55545.0,
       "baseline_mpg": 16,
@@ -479,7 +479,7 @@
       "period_mpg": 12.2,
       "total_miles": 536,
       "total_gallons": 44.0,
-      "fill_count": 5,
+      "fill_count": 4,
       "first_odo": 32612.0,
       "last_odo": 33148.0,
       "baseline_mpg": 16,
@@ -539,7 +539,7 @@
       "period_mpg": 14.2,
       "total_miles": 1135,
       "total_gallons": 80.0,
-      "fill_count": 7,
+      "fill_count": 6,
       "first_odo": 42128.0,
       "last_odo": 43263.0,
       "baseline_mpg": 16,
@@ -562,8 +562,8 @@
     "23-Ram-Truck-5262": {
       "period_mpg": null,
       "total_miles": null,
-      "total_gallons": 18.5,
-      "fill_count": 2,
+      "total_gallons": 17.5,
+      "fill_count": 1,
       "baseline_mpg": 16,
       "pct_diff": null,
       "flagged": false,
@@ -573,7 +573,7 @@
       "period_mpg": 24.5,
       "total_miles": 661,
       "total_gallons": 26.9,
-      "fill_count": 5,
+      "fill_count": 3,
       "first_odo": 40397.0,
       "last_odo": 41058.0,
       "baseline_mpg": 16,
@@ -597,7 +597,7 @@
       "period_mpg": null,
       "total_miles": 450579,
       "total_gallons": 39.0,
-      "fill_count": 5,
+      "fill_count": 4,
       "baseline_mpg": 16,
       "pct_diff": null,
       "flagged": false,
@@ -618,7 +618,7 @@
       "period_mpg": null,
       "total_miles": 13244,
       "total_gallons": 108.5,
-      "fill_count": 7,
+      "fill_count": 6,
       "baseline_mpg": 16,
       "pct_diff": null,
       "flagged": false,
@@ -653,7 +653,7 @@
       "period_mpg": null,
       "total_miles": 53370,
       "total_gallons": 95.9,
-      "fill_count": 7,
+      "fill_count": 6,
       "baseline_mpg": 15,
       "pct_diff": null,
       "flagged": false,
@@ -674,7 +674,7 @@
       "period_mpg": 11.1,
       "total_miles": 398,
       "total_gallons": 35.8,
-      "fill_count": 5,
+      "fill_count": 4,
       "first_odo": 90927.0,
       "last_odo": 91325.0,
       "baseline_mpg": 22,
@@ -686,7 +686,7 @@
       "period_mpg": null,
       "total_miles": 19274,
       "total_gallons": 40.8,
-      "fill_count": 5,
+      "fill_count": 4,
       "baseline_mpg": 16,
       "pct_diff": null,
       "flagged": false,
@@ -720,7 +720,7 @@
       "period_mpg": 15.1,
       "total_miles": 783,
       "total_gallons": 51.8,
-      "fill_count": 6,
+      "fill_count": 5,
       "first_odo": 27999.0,
       "last_odo": 28782.0,
       "baseline_mpg": 16,
@@ -778,7 +778,7 @@
       "period_mpg": 18.2,
       "total_miles": 162,
       "total_gallons": 8.9,
-      "fill_count": 4,
+      "fill_count": 2,
       "first_odo": 181737.0,
       "last_odo": 181899.0,
       "baseline_mpg": 19,
@@ -802,7 +802,7 @@
       "period_mpg": 13.7,
       "total_miles": 153,
       "total_gallons": 11.2,
-      "fill_count": 3,
+      "fill_count": 2,
       "first_odo": 15993.0,
       "last_odo": 16146.0,
       "baseline_mpg": 16,
@@ -838,7 +838,7 @@
       "period_mpg": 16.2,
       "total_miles": 1147,
       "total_gallons": 70.8,
-      "fill_count": 7,
+      "fill_count": 5,
       "first_odo": 8518.0,
       "last_odo": 9665.0,
       "baseline_mpg": 16,
@@ -926,8 +926,8 @@
     "22-Ram-Truck-9006": {
       "period_mpg": null,
       "total_miles": null,
-      "total_gallons": 20.4,
-      "fill_count": 2,
+      "total_gallons": 19.4,
+      "fill_count": 1,
       "baseline_mpg": 15,
       "pct_diff": null,
       "flagged": false,
@@ -936,8 +936,8 @@
     "20-Ram-Truck-4145": {
       "period_mpg": null,
       "total_miles": null,
-      "total_gallons": 8.6,
-      "fill_count": 2,
+      "total_gallons": 7.6,
+      "fill_count": 1,
       "baseline_mpg": 15,
       "pct_diff": null,
       "flagged": false,
@@ -946,8 +946,8 @@
     "23-Ford-Van-5103": {
       "period_mpg": null,
       "total_miles": null,
-      "total_gallons": 1.0,
-      "fill_count": 1,
+      "total_gallons": 0,
+      "fill_count": 0,
       "baseline_mpg": 16,
       "pct_diff": null,
       "flagged": false,
@@ -962,7 +962,6 @@
       "flag_types": [
         1,
         3,
-        4,
         5
       ],
       "vehicles_flagged_mpg": [
@@ -1029,7 +1028,6 @@
       "flag_types": [
         1,
         3,
-        4,
         5,
         6
       ],
@@ -1052,7 +1050,6 @@
         1,
         2,
         3,
-        4,
         5,
         6
       ],
@@ -1067,7 +1064,6 @@
       "total_spend": 2057.96,
       "flag_types": [
         3,
-        4,
         5
       ],
       "vehicles_flagged_mpg": []
@@ -1078,7 +1074,6 @@
       "total_spend": 790.01,
       "flag_types": [
         3,
-        4,
         5,
         6
       ],
@@ -1769,6 +1764,13 @@
       "sub_account": "AEROSEAL CO",
       "flags": [
         {
+          "flag": 4,
+          "flag_name": "Unusually Small Fill",
+          "reason": "This fill of 1.9 gallons is unusually small compared to this vehicle's average fill of 9.0 gallons. Could indicate personal vehicle use.",
+          "gallons": 1.9,
+          "avg_gallons": 9.0
+        },
+        {
           "flag": 6,
           "flag_name": "Wrong Fuel Type",
           "reason": "This vehicle is designated Gasoline but was filled with UNLEADED PREMIUM (90 OR 91 OCTANE) on 2026-03-02. Gas vehicles should use regular unleaded only.",
@@ -1776,7 +1778,7 @@
           "actual_fuel": "UNLEADED PREMIUM (90 OR 91 OCTANE)"
         }
       ],
-      "flag_count": 1
+      "flag_count": 2
     },
     {
       "transaction_date": "2026-03-02",
@@ -2963,9 +2965,9 @@
         {
           "flag": 4,
           "flag_name": "Unusually Small Fill",
-          "reason": "This fill of 2.1 gallons is unusually small compared to this vehicle's average fill of 11.3 gallons. Could indicate personal vehicle use.",
+          "reason": "This fill of 2.1 gallons is unusually small compared to this vehicle's average fill of 13.3 gallons. Could indicate personal vehicle use.",
           "gallons": 2.1,
-          "avg_gallons": 11.3
+          "avg_gallons": 13.3
         },
         {
           "flag": 5,
@@ -6336,16 +6338,9 @@
           "flag": 3,
           "flag_name": "Missing Odometer",
           "reason": "No odometer reading was entered at the time of this fill."
-        },
-        {
-          "flag": 4,
-          "flag_name": "Unusually Small Fill",
-          "reason": "This fill of 1.0 gallons is unusually small compared to this vehicle's average fill of 5.6 gallons. Could indicate personal vehicle use.",
-          "gallons": 1.0,
-          "avg_gallons": 5.6
         }
       ],
-      "flag_count": 2
+      "flag_count": 1
     },
     {
       "transaction_date": "2026-03-13",
@@ -6412,16 +6407,9 @@
           "flag": 3,
           "flag_name": "Missing Odometer",
           "reason": "No odometer reading was entered at the time of this fill."
-        },
-        {
-          "flag": 4,
-          "flag_name": "Unusually Small Fill",
-          "reason": "This fill of 1.0 gallons is unusually small compared to this vehicle's average fill of 14.2 gallons. Could indicate personal vehicle use.",
-          "gallons": 1.0,
-          "avg_gallons": 14.2
         }
       ],
-      "flag_count": 2
+      "flag_count": 1
     },
     {
       "transaction_date": "2026-03-13",
@@ -6446,16 +6434,9 @@
           "flag": 3,
           "flag_name": "Missing Odometer",
           "reason": "No odometer reading was entered at the time of this fill."
-        },
-        {
-          "flag": 4,
-          "flag_name": "Unusually Small Fill",
-          "reason": "This fill of 1.0 gallons is unusually small compared to this vehicle's average fill of 15.8 gallons. Could indicate personal vehicle use.",
-          "gallons": 1.0,
-          "avg_gallons": 15.8
         }
       ],
-      "flag_count": 2
+      "flag_count": 1
     },
     {
       "transaction_date": "2026-03-13",
@@ -6593,16 +6574,9 @@
           "flag": 3,
           "flag_name": "Missing Odometer",
           "reason": "No odometer reading was entered at the time of this fill."
-        },
-        {
-          "flag": 4,
-          "flag_name": "Unusually Small Fill",
-          "reason": "This fill of 1.0 gallons is unusually small compared to this vehicle's average fill of 14.7 gallons. Could indicate personal vehicle use.",
-          "gallons": 1.0,
-          "avg_gallons": 14.7
         }
       ],
-      "flag_count": 2
+      "flag_count": 1
     },
     {
       "transaction_date": "2026-03-13",
@@ -6627,16 +6601,9 @@
           "flag": 3,
           "flag_name": "Missing Odometer",
           "reason": "No odometer reading was entered at the time of this fill."
-        },
-        {
-          "flag": 4,
-          "flag_name": "Unusually Small Fill",
-          "reason": "This fill of 1.0 gallons is unusually small compared to this vehicle's average fill of 18.3 gallons. Could indicate personal vehicle use.",
-          "gallons": 1.0,
-          "avg_gallons": 18.3
         }
       ],
-      "flag_count": 2
+      "flag_count": 1
     },
     {
       "transaction_date": "2026-03-13",
@@ -6682,16 +6649,9 @@
           "flag": 3,
           "flag_name": "Missing Odometer",
           "reason": "No odometer reading was entered at the time of this fill."
-        },
-        {
-          "flag": 4,
-          "flag_name": "Unusually Small Fill",
-          "reason": "This fill of 1.0 gallons is unusually small compared to this vehicle's average fill of 14.9 gallons. Could indicate personal vehicle use.",
-          "gallons": 1.0,
-          "avg_gallons": 14.9
         }
       ],
-      "flag_count": 2
+      "flag_count": 1
     },
     {
       "transaction_date": "2026-03-14",
@@ -6716,16 +6676,9 @@
           "flag": 3,
           "flag_name": "Missing Odometer",
           "reason": "No odometer reading was entered at the time of this fill."
-        },
-        {
-          "flag": 4,
-          "flag_name": "Unusually Small Fill",
-          "reason": "This fill of 1.0 gallons is unusually small compared to this vehicle's average fill of 18.3 gallons. Could indicate personal vehicle use.",
-          "gallons": 1.0,
-          "avg_gallons": 18.3
         }
       ],
-      "flag_count": 2
+      "flag_count": 1
     },
     {
       "transaction_date": "2026-03-14",
@@ -6750,16 +6703,9 @@
           "flag": 3,
           "flag_name": "Missing Odometer",
           "reason": "No odometer reading was entered at the time of this fill."
-        },
-        {
-          "flag": 4,
-          "flag_name": "Unusually Small Fill",
-          "reason": "This fill of 1.0 gallons is unusually small compared to this vehicle's average fill of 5.6 gallons. Could indicate personal vehicle use.",
-          "gallons": 1.0,
-          "avg_gallons": 5.6
         }
       ],
-      "flag_count": 2
+      "flag_count": 1
     },
     {
       "transaction_date": "2026-03-14",
@@ -6784,16 +6730,9 @@
           "flag": 3,
           "flag_name": "Missing Odometer",
           "reason": "No odometer reading was entered at the time of this fill."
-        },
-        {
-          "flag": 4,
-          "flag_name": "Unusually Small Fill",
-          "reason": "This fill of 1.0 gallons is unusually small compared to this vehicle's average fill of 13.2 gallons. Could indicate personal vehicle use.",
-          "gallons": 1.0,
-          "avg_gallons": 13.2
         }
       ],
-      "flag_count": 2
+      "flag_count": 1
     },
     {
       "transaction_date": "2026-03-15",
@@ -8277,9 +8216,9 @@
         {
           "flag": 4,
           "flag_name": "Unusually Small Fill",
-          "reason": "This fill of 2.5 gallons is unusually small compared to this vehicle's average fill of 18.6 gallons. Could indicate personal vehicle use.",
+          "reason": "This fill of 2.5 gallons is unusually small compared to this vehicle's average fill of 21.6 gallons. Could indicate personal vehicle use.",
           "gallons": 2.5,
-          "avg_gallons": 18.6
+          "avg_gallons": 21.6
         },
         {
           "flag": 5,
@@ -10594,9 +10533,9 @@
         {
           "flag": 4,
           "flag_name": "Unusually Small Fill",
-          "reason": "This fill of 2.4 gallons is unusually small compared to this vehicle's average fill of 11.3 gallons. Could indicate personal vehicle use.",
+          "reason": "This fill of 2.4 gallons is unusually small compared to this vehicle's average fill of 13.3 gallons. Could indicate personal vehicle use.",
           "gallons": 2.4,
-          "avg_gallons": 11.3
+          "avg_gallons": 13.3
         },
         {
           "flag": 5,
@@ -10710,16 +10649,9 @@
           "flag": 3,
           "flag_name": "Missing Odometer",
           "reason": "No odometer reading was entered at the time of this fill."
-        },
-        {
-          "flag": 4,
-          "flag_name": "Unusually Small Fill",
-          "reason": "This fill of 1.0 gallons is unusually small compared to this vehicle's average fill of 11.5 gallons. Could indicate personal vehicle use.",
-          "gallons": 1.0,
-          "avg_gallons": 11.5
         }
       ],
-      "flag_count": 2
+      "flag_count": 1
     },
     {
       "transaction_date": "2026-03-23",
@@ -10775,16 +10707,9 @@
           "flag": 3,
           "flag_name": "Missing Odometer",
           "reason": "No odometer reading was entered at the time of this fill."
-        },
-        {
-          "flag": 4,
-          "flag_name": "Unusually Small Fill",
-          "reason": "This fill of 1.0 gallons is unusually small compared to this vehicle's average fill of 15.8 gallons. Could indicate personal vehicle use.",
-          "gallons": 1.0,
-          "avg_gallons": 15.8
         }
       ],
-      "flag_count": 2
+      "flag_count": 1
     },
     {
       "transaction_date": "2026-03-24",
@@ -10809,16 +10734,9 @@
           "flag": 3,
           "flag_name": "Missing Odometer",
           "reason": "No odometer reading was entered at the time of this fill."
-        },
-        {
-          "flag": 4,
-          "flag_name": "Unusually Small Fill",
-          "reason": "This fill of 1.0 gallons is unusually small compared to this vehicle's average fill of 9.7 gallons. Could indicate personal vehicle use.",
-          "gallons": 1.0,
-          "avg_gallons": 9.7
         }
       ],
-      "flag_count": 2
+      "flag_count": 1
     },
     {
       "transaction_date": "2026-03-24",
@@ -10843,16 +10761,9 @@
           "flag": 3,
           "flag_name": "Missing Odometer",
           "reason": "No odometer reading was entered at the time of this fill."
-        },
-        {
-          "flag": 4,
-          "flag_name": "Unusually Small Fill",
-          "reason": "This fill of 1.0 gallons is unusually small compared to this vehicle's average fill of 12.0 gallons. Could indicate personal vehicle use.",
-          "gallons": 1.0,
-          "avg_gallons": 12.0
         }
       ],
-      "flag_count": 2
+      "flag_count": 1
     },
     {
       "transaction_date": "2026-03-24",
@@ -10879,13 +10790,6 @@
           "reason": "No odometer reading was entered at the time of this fill."
         },
         {
-          "flag": 4,
-          "flag_name": "Unusually Small Fill",
-          "reason": "This fill of 1.0 gallons is unusually small compared to this vehicle's average fill of 5.5 gallons. Could indicate personal vehicle use.",
-          "gallons": 1.0,
-          "avg_gallons": 5.5
-        },
-        {
           "flag": 5,
           "flag_name": "High Frequency Fills",
           "reason": "Driver SAM SWIFT had 6 fills within 48 hours on 2026-03-23 07:14, 2026-03-23 07:15, 2026-03-24 07:17, 2026-03-24 07:20, 2026-03-25 07:09.... This pattern may warrant review.",
@@ -10893,7 +10797,7 @@
           "fill_count": 6
         }
       ],
-      "flag_count": 3
+      "flag_count": 2
     },
     {
       "transaction_date": "2026-03-24",
@@ -10920,13 +10824,6 @@
           "reason": "No odometer reading was entered at the time of this fill."
         },
         {
-          "flag": 4,
-          "flag_name": "Unusually Small Fill",
-          "reason": "This fill of 1.0 gallons is unusually small compared to this vehicle's average fill of 5.5 gallons. Could indicate personal vehicle use.",
-          "gallons": 1.0,
-          "avg_gallons": 5.5
-        },
-        {
           "flag": 5,
           "flag_name": "High Frequency Fills",
           "reason": "Driver SAM SWIFT had 6 fills within 48 hours on 2026-03-23 07:14, 2026-03-23 07:15, 2026-03-24 07:17, 2026-03-24 07:20, 2026-03-25 07:09.... This pattern may warrant review.",
@@ -10934,7 +10831,7 @@
           "fill_count": 6
         }
       ],
-      "flag_count": 3
+      "flag_count": 2
     },
     {
       "transaction_date": "2026-03-24",
@@ -10961,13 +10858,6 @@
           "reason": "No odometer reading was entered at the time of this fill."
         },
         {
-          "flag": 4,
-          "flag_name": "Unusually Small Fill",
-          "reason": "This fill of 1.0 gallons is unusually small compared to this vehicle's average fill of 11.3 gallons. Could indicate personal vehicle use.",
-          "gallons": 1.0,
-          "avg_gallons": 11.3
-        },
-        {
           "flag": 5,
           "flag_name": "High Frequency Fills",
           "reason": "Driver KEVIN GIBLIN had 5 fills within 48 hours on 2026-03-23 07:49, 2026-03-23 07:51, 2026-03-24 07:59, 2026-03-25 07:38, 2026-03-25 07:41. This pattern may warrant review.",
@@ -10975,7 +10865,7 @@
           "fill_count": 5
         }
       ],
-      "flag_count": 3
+      "flag_count": 2
     },
     {
       "transaction_date": "2026-03-23",
@@ -11132,16 +11022,9 @@
           "flag": 3,
           "flag_name": "Missing Odometer",
           "reason": "No odometer reading was entered at the time of this fill."
-        },
-        {
-          "flag": 4,
-          "flag_name": "Unusually Small Fill",
-          "reason": "This fill of 1.0 gallons is unusually small compared to this vehicle's average fill of 14.1 gallons. Could indicate personal vehicle use.",
-          "gallons": 1.0,
-          "avg_gallons": 14.1
         }
       ],
-      "flag_count": 2
+      "flag_count": 1
     },
     {
       "transaction_date": "2026-03-24",
@@ -11166,16 +11049,9 @@
           "flag": 3,
           "flag_name": "Missing Odometer",
           "reason": "No odometer reading was entered at the time of this fill."
-        },
-        {
-          "flag": 4,
-          "flag_name": "Unusually Small Fill",
-          "reason": "This fill of 1.0 gallons is unusually small compared to this vehicle's average fill of 14.1 gallons. Could indicate personal vehicle use.",
-          "gallons": 1.0,
-          "avg_gallons": 14.1
         }
       ],
-      "flag_count": 2
+      "flag_count": 1
     },
     {
       "transaction_date": "2026-03-23",
@@ -11242,16 +11118,9 @@
           "flag": 3,
           "flag_name": "Missing Odometer",
           "reason": "No odometer reading was entered at the time of this fill."
-        },
-        {
-          "flag": 4,
-          "flag_name": "Unusually Small Fill",
-          "reason": "This fill of 1.0 gallons is unusually small compared to this vehicle's average fill of 9.6 gallons. Could indicate personal vehicle use.",
-          "gallons": 1.0,
-          "avg_gallons": 9.6
         }
       ],
-      "flag_count": 2
+      "flag_count": 1
     },
     {
       "transaction_date": "2026-03-24",
@@ -11276,16 +11145,9 @@
           "flag": 3,
           "flag_name": "Missing Odometer",
           "reason": "No odometer reading was entered at the time of this fill."
-        },
-        {
-          "flag": 4,
-          "flag_name": "Unusually Small Fill",
-          "reason": "This fill of 1.0 gallons is unusually small compared to this vehicle's average fill of 10.8 gallons. Could indicate personal vehicle use.",
-          "gallons": 1.0,
-          "avg_gallons": 10.8
         }
       ],
-      "flag_count": 2
+      "flag_count": 1
     },
     {
       "transaction_date": "2026-03-23",
@@ -11310,16 +11172,9 @@
           "flag": 3,
           "flag_name": "Missing Odometer",
           "reason": "No odometer reading was entered at the time of this fill."
-        },
-        {
-          "flag": 4,
-          "flag_name": "Unusually Small Fill",
-          "reason": "This fill of 1.0 gallons is unusually small compared to this vehicle's average fill of 12.0 gallons. Could indicate personal vehicle use.",
-          "gallons": 1.0,
-          "avg_gallons": 12.0
         }
       ],
-      "flag_count": 2
+      "flag_count": 1
     },
     {
       "transaction_date": "2026-03-23",
@@ -11344,16 +11199,9 @@
           "flag": 3,
           "flag_name": "Missing Odometer",
           "reason": "No odometer reading was entered at the time of this fill."
-        },
-        {
-          "flag": 4,
-          "flag_name": "Unusually Small Fill",
-          "reason": "This fill of 1.0 gallons is unusually small compared to this vehicle's average fill of 7.4 gallons. Could indicate personal vehicle use.",
-          "gallons": 1.0,
-          "avg_gallons": 7.4
         }
       ],
-      "flag_count": 2
+      "flag_count": 1
     },
     {
       "transaction_date": "2026-03-23",
@@ -11380,13 +11228,6 @@
           "reason": "No odometer reading was entered at the time of this fill."
         },
         {
-          "flag": 4,
-          "flag_name": "Unusually Small Fill",
-          "reason": "This fill of 1.0 gallons is unusually small compared to this vehicle's average fill of 5.5 gallons. Could indicate personal vehicle use.",
-          "gallons": 1.0,
-          "avg_gallons": 5.5
-        },
-        {
           "flag": 5,
           "flag_name": "High Frequency Fills",
           "reason": "Driver SAM SWIFT had 6 fills within 48 hours on 2026-03-23 07:14, 2026-03-23 07:15, 2026-03-24 07:17, 2026-03-24 07:20, 2026-03-25 07:09.... This pattern may warrant review.",
@@ -11394,7 +11235,7 @@
           "fill_count": 6
         }
       ],
-      "flag_count": 3
+      "flag_count": 2
     },
     {
       "transaction_date": "2026-03-23",
@@ -11421,13 +11262,6 @@
           "reason": "No odometer reading was entered at the time of this fill."
         },
         {
-          "flag": 4,
-          "flag_name": "Unusually Small Fill",
-          "reason": "This fill of 1.0 gallons is unusually small compared to this vehicle's average fill of 5.5 gallons. Could indicate personal vehicle use.",
-          "gallons": 1.0,
-          "avg_gallons": 5.5
-        },
-        {
           "flag": 5,
           "flag_name": "High Frequency Fills",
           "reason": "Driver SAM SWIFT had 6 fills within 48 hours on 2026-03-23 07:14, 2026-03-23 07:15, 2026-03-24 07:17, 2026-03-24 07:20, 2026-03-25 07:09.... This pattern may warrant review.",
@@ -11435,7 +11269,7 @@
           "fill_count": 6
         }
       ],
-      "flag_count": 3
+      "flag_count": 2
     },
     {
       "transaction_date": "2026-03-23",
@@ -11460,16 +11294,9 @@
           "flag": 3,
           "flag_name": "Missing Odometer",
           "reason": "No odometer reading was entered at the time of this fill."
-        },
-        {
-          "flag": 4,
-          "flag_name": "Unusually Small Fill",
-          "reason": "This fill of 1.0 gallons is unusually small compared to this vehicle's average fill of 8.4 gallons. Could indicate personal vehicle use.",
-          "gallons": 1.0,
-          "avg_gallons": 8.4
         }
       ],
-      "flag_count": 2
+      "flag_count": 1
     },
     {
       "transaction_date": "2026-03-23",
@@ -11494,16 +11321,9 @@
           "flag": 3,
           "flag_name": "Missing Odometer",
           "reason": "No odometer reading was entered at the time of this fill."
-        },
-        {
-          "flag": 4,
-          "flag_name": "Unusually Small Fill",
-          "reason": "This fill of 1.0 gallons is unusually small compared to this vehicle's average fill of 9.6 gallons. Could indicate personal vehicle use.",
-          "gallons": 1.0,
-          "avg_gallons": 9.6
         }
       ],
-      "flag_count": 2
+      "flag_count": 1
     },
     {
       "transaction_date": "2026-03-23",
@@ -11528,16 +11348,9 @@
           "flag": 3,
           "flag_name": "Missing Odometer",
           "reason": "No odometer reading was entered at the time of this fill."
-        },
-        {
-          "flag": 4,
-          "flag_name": "Unusually Small Fill",
-          "reason": "This fill of 1.0 gallons is unusually small compared to this vehicle's average fill of 12.5 gallons. Could indicate personal vehicle use.",
-          "gallons": 1.0,
-          "avg_gallons": 12.5
         }
       ],
-      "flag_count": 2
+      "flag_count": 1
     },
     {
       "transaction_date": "2026-03-23",
@@ -11562,16 +11375,9 @@
           "flag": 3,
           "flag_name": "Missing Odometer",
           "reason": "No odometer reading was entered at the time of this fill."
-        },
-        {
-          "flag": 4,
-          "flag_name": "Unusually Small Fill",
-          "reason": "This fill of 1.0 gallons is unusually small compared to this vehicle's average fill of 18.6 gallons. Could indicate personal vehicle use.",
-          "gallons": 1.0,
-          "avg_gallons": 18.6
         }
       ],
-      "flag_count": 2
+      "flag_count": 1
     },
     {
       "transaction_date": "2026-03-23",
@@ -11596,16 +11402,9 @@
           "flag": 3,
           "flag_name": "Missing Odometer",
           "reason": "No odometer reading was entered at the time of this fill."
-        },
-        {
-          "flag": 4,
-          "flag_name": "Unusually Small Fill",
-          "reason": "This fill of 1.0 gallons is unusually small compared to this vehicle's average fill of 15.8 gallons. Could indicate personal vehicle use.",
-          "gallons": 1.0,
-          "avg_gallons": 15.8
         }
       ],
-      "flag_count": 2
+      "flag_count": 1
     },
     {
       "transaction_date": "2026-03-23",
@@ -11630,16 +11429,9 @@
           "flag": 3,
           "flag_name": "Missing Odometer",
           "reason": "No odometer reading was entered at the time of this fill."
-        },
-        {
-          "flag": 4,
-          "flag_name": "Unusually Small Fill",
-          "reason": "This fill of 1.0 gallons is unusually small compared to this vehicle's average fill of 4.3 gallons. Could indicate personal vehicle use.",
-          "gallons": 1.0,
-          "avg_gallons": 4.3
         }
       ],
-      "flag_count": 2
+      "flag_count": 1
     },
     {
       "transaction_date": "2026-03-24",
@@ -11664,16 +11456,9 @@
           "flag": 3,
           "flag_name": "Missing Odometer",
           "reason": "No odometer reading was entered at the time of this fill."
-        },
-        {
-          "flag": 4,
-          "flag_name": "Unusually Small Fill",
-          "reason": "This fill of 1.0 gallons is unusually small compared to this vehicle's average fill of 14.7 gallons. Could indicate personal vehicle use.",
-          "gallons": 1.0,
-          "avg_gallons": 14.7
         }
       ],
-      "flag_count": 2
+      "flag_count": 1
     },
     {
       "transaction_date": "2026-03-24",
@@ -11698,16 +11483,9 @@
           "flag": 3,
           "flag_name": "Missing Odometer",
           "reason": "No odometer reading was entered at the time of this fill."
-        },
-        {
-          "flag": 4,
-          "flag_name": "Unusually Small Fill",
-          "reason": "This fill of 1.0 gallons is unusually small compared to this vehicle's average fill of 11.9 gallons. Could indicate personal vehicle use.",
-          "gallons": 1.0,
-          "avg_gallons": 11.9
         }
       ],
-      "flag_count": 2
+      "flag_count": 1
     },
     {
       "transaction_date": "2026-03-24",
@@ -11732,16 +11510,9 @@
           "flag": 3,
           "flag_name": "Missing Odometer",
           "reason": "No odometer reading was entered at the time of this fill."
-        },
-        {
-          "flag": 4,
-          "flag_name": "Unusually Small Fill",
-          "reason": "This fill of 1.0 gallons is unusually small compared to this vehicle's average fill of 11.9 gallons. Could indicate personal vehicle use.",
-          "gallons": 1.0,
-          "avg_gallons": 11.9
         }
       ],
-      "flag_count": 2
+      "flag_count": 1
     },
     {
       "transaction_date": "2026-03-24",
@@ -11766,16 +11537,9 @@
           "flag": 3,
           "flag_name": "Missing Odometer",
           "reason": "No odometer reading was entered at the time of this fill."
-        },
-        {
-          "flag": 4,
-          "flag_name": "Unusually Small Fill",
-          "reason": "This fill of 1.0 gallons is unusually small compared to this vehicle's average fill of 9.3 gallons. Could indicate personal vehicle use.",
-          "gallons": 1.0,
-          "avg_gallons": 9.3
         }
       ],
-      "flag_count": 2
+      "flag_count": 1
     },
     {
       "transaction_date": "2026-03-25",
@@ -11800,16 +11564,9 @@
           "flag": 3,
           "flag_name": "Missing Odometer",
           "reason": "No odometer reading was entered at the time of this fill."
-        },
-        {
-          "flag": 4,
-          "flag_name": "Unusually Small Fill",
-          "reason": "This fill of 1.0 gallons is unusually small compared to this vehicle's average fill of 15.3 gallons. Could indicate personal vehicle use.",
-          "gallons": 1.0,
-          "avg_gallons": 15.3
         }
       ],
-      "flag_count": 2
+      "flag_count": 1
     },
     {
       "transaction_date": "2026-03-25",
@@ -11834,16 +11591,9 @@
           "flag": 3,
           "flag_name": "Missing Odometer",
           "reason": "No odometer reading was entered at the time of this fill."
-        },
-        {
-          "flag": 4,
-          "flag_name": "Unusually Small Fill",
-          "reason": "This fill of 1.0 gallons is unusually small compared to this vehicle's average fill of 15.8 gallons. Could indicate personal vehicle use.",
-          "gallons": 1.0,
-          "avg_gallons": 15.8
         }
       ],
-      "flag_count": 2
+      "flag_count": 1
     },
     {
       "transaction_date": "2026-03-25",
@@ -11868,16 +11618,9 @@
           "flag": 3,
           "flag_name": "Missing Odometer",
           "reason": "No odometer reading was entered at the time of this fill."
-        },
-        {
-          "flag": 4,
-          "flag_name": "Unusually Small Fill",
-          "reason": "This fill of 1.0 gallons is unusually small compared to this vehicle's average fill of 7.4 gallons. Could indicate personal vehicle use.",
-          "gallons": 1.0,
-          "avg_gallons": 7.4
         }
       ],
-      "flag_count": 2
+      "flag_count": 1
     },
     {
       "transaction_date": "2026-03-25",
@@ -11904,13 +11647,6 @@
           "reason": "No odometer reading was entered at the time of this fill."
         },
         {
-          "flag": 4,
-          "flag_name": "Unusually Small Fill",
-          "reason": "This fill of 1.0 gallons is unusually small compared to this vehicle's average fill of 5.5 gallons. Could indicate personal vehicle use.",
-          "gallons": 1.0,
-          "avg_gallons": 5.5
-        },
-        {
           "flag": 5,
           "flag_name": "High Frequency Fills",
           "reason": "Driver SAM SWIFT had 6 fills within 48 hours on 2026-03-23 07:14, 2026-03-23 07:15, 2026-03-24 07:17, 2026-03-24 07:20, 2026-03-25 07:09.... This pattern may warrant review.",
@@ -11918,7 +11654,7 @@
           "fill_count": 6
         }
       ],
-      "flag_count": 3
+      "flag_count": 2
     },
     {
       "transaction_date": "2026-03-25",
@@ -11945,13 +11681,6 @@
           "reason": "No odometer reading was entered at the time of this fill."
         },
         {
-          "flag": 4,
-          "flag_name": "Unusually Small Fill",
-          "reason": "This fill of 1.0 gallons is unusually small compared to this vehicle's average fill of 5.5 gallons. Could indicate personal vehicle use.",
-          "gallons": 1.0,
-          "avg_gallons": 5.5
-        },
-        {
           "flag": 5,
           "flag_name": "High Frequency Fills",
           "reason": "Driver SAM SWIFT had 6 fills within 48 hours on 2026-03-23 07:14, 2026-03-23 07:15, 2026-03-24 07:17, 2026-03-24 07:20, 2026-03-25 07:09.... This pattern may warrant review.",
@@ -11959,7 +11688,7 @@
           "fill_count": 6
         }
       ],
-      "flag_count": 3
+      "flag_count": 2
     },
     {
       "transaction_date": "2026-03-25",
@@ -11984,16 +11713,9 @@
           "flag": 3,
           "flag_name": "Missing Odometer",
           "reason": "No odometer reading was entered at the time of this fill."
-        },
-        {
-          "flag": 4,
-          "flag_name": "Unusually Small Fill",
-          "reason": "This fill of 1.0 gallons is unusually small compared to this vehicle's average fill of 11.1 gallons. Could indicate personal vehicle use.",
-          "gallons": 1.0,
-          "avg_gallons": 11.1
         }
       ],
-      "flag_count": 2
+      "flag_count": 1
     },
     {
       "transaction_date": "2026-03-25",
@@ -12020,13 +11742,6 @@
           "reason": "No odometer reading was entered at the time of this fill."
         },
         {
-          "flag": 4,
-          "flag_name": "Unusually Small Fill",
-          "reason": "This fill of 1.0 gallons is unusually small compared to this vehicle's average fill of 11.3 gallons. Could indicate personal vehicle use.",
-          "gallons": 1.0,
-          "avg_gallons": 11.3
-        },
-        {
           "flag": 5,
           "flag_name": "High Frequency Fills",
           "reason": "Driver KEVIN GIBLIN had 5 fills within 48 hours on 2026-03-23 07:49, 2026-03-23 07:51, 2026-03-24 07:59, 2026-03-25 07:38, 2026-03-25 07:41. This pattern may warrant review.",
@@ -12034,7 +11749,7 @@
           "fill_count": 5
         }
       ],
-      "flag_count": 3
+      "flag_count": 2
     },
     {
       "transaction_date": "2026-03-25",
@@ -12061,13 +11776,6 @@
           "reason": "No odometer reading was entered at the time of this fill."
         },
         {
-          "flag": 4,
-          "flag_name": "Unusually Small Fill",
-          "reason": "This fill of 1.0 gallons is unusually small compared to this vehicle's average fill of 11.3 gallons. Could indicate personal vehicle use.",
-          "gallons": 1.0,
-          "avg_gallons": 11.3
-        },
-        {
           "flag": 5,
           "flag_name": "High Frequency Fills",
           "reason": "Driver KEVIN GIBLIN had 5 fills within 48 hours on 2026-03-23 07:49, 2026-03-23 07:51, 2026-03-24 07:59, 2026-03-25 07:38, 2026-03-25 07:41. This pattern may warrant review.",
@@ -12075,7 +11783,7 @@
           "fill_count": 5
         }
       ],
-      "flag_count": 3
+      "flag_count": 2
     },
     {
       "transaction_date": "2026-03-24",
@@ -12100,16 +11808,9 @@
           "flag": 3,
           "flag_name": "Missing Odometer",
           "reason": "No odometer reading was entered at the time of this fill."
-        },
-        {
-          "flag": 4,
-          "flag_name": "Unusually Small Fill",
-          "reason": "This fill of 1.0 gallons is unusually small compared to this vehicle's average fill of 13.6 gallons. Could indicate personal vehicle use.",
-          "gallons": 1.0,
-          "avg_gallons": 13.6
         }
       ],
-      "flag_count": 2
+      "flag_count": 1
     },
     {
       "transaction_date": "2026-03-24",
@@ -12134,16 +11835,9 @@
           "flag": 3,
           "flag_name": "Missing Odometer",
           "reason": "No odometer reading was entered at the time of this fill."
-        },
-        {
-          "flag": 4,
-          "flag_name": "Unusually Small Fill",
-          "reason": "This fill of 1.0 gallons is unusually small compared to this vehicle's average fill of 17.7 gallons. Could indicate personal vehicle use.",
-          "gallons": 1.0,
-          "avg_gallons": 17.7
         }
       ],
-      "flag_count": 2
+      "flag_count": 1
     },
     {
       "transaction_date": "2026-03-24",
@@ -12168,16 +11862,9 @@
           "flag": 3,
           "flag_name": "Missing Odometer",
           "reason": "No odometer reading was entered at the time of this fill."
-        },
-        {
-          "flag": 4,
-          "flag_name": "Unusually Small Fill",
-          "reason": "This fill of 1.0 gallons is unusually small compared to this vehicle's average fill of 22.1 gallons. Could indicate personal vehicle use.",
-          "gallons": 1.0,
-          "avg_gallons": 22.1
         }
       ],
-      "flag_count": 2
+      "flag_count": 1
     },
     {
       "transaction_date": "2026-03-24",
@@ -12202,16 +11889,9 @@
           "flag": 3,
           "flag_name": "Missing Odometer",
           "reason": "No odometer reading was entered at the time of this fill."
-        },
-        {
-          "flag": 4,
-          "flag_name": "Unusually Small Fill",
-          "reason": "This fill of 1.0 gallons is unusually small compared to this vehicle's average fill of 13.9 gallons. Could indicate personal vehicle use.",
-          "gallons": 1.0,
-          "avg_gallons": 13.9
         }
       ],
-      "flag_count": 2
+      "flag_count": 1
     },
     {
       "transaction_date": "2026-03-25",
@@ -12236,16 +11916,9 @@
           "flag": 3,
           "flag_name": "Missing Odometer",
           "reason": "No odometer reading was entered at the time of this fill."
-        },
-        {
-          "flag": 4,
-          "flag_name": "Unusually Small Fill",
-          "reason": "This fill of 1.0 gallons is unusually small compared to this vehicle's average fill of 8.4 gallons. Could indicate personal vehicle use.",
-          "gallons": 1.0,
-          "avg_gallons": 8.4
         }
       ],
-      "flag_count": 2
+      "flag_count": 1
     },
     {
       "transaction_date": "2026-03-25",
@@ -12270,16 +11943,9 @@
           "flag": 3,
           "flag_name": "Missing Odometer",
           "reason": "No odometer reading was entered at the time of this fill."
-        },
-        {
-          "flag": 4,
-          "flag_name": "Unusually Small Fill",
-          "reason": "This fill of 1.0 gallons is unusually small compared to this vehicle's average fill of 13.6 gallons. Could indicate personal vehicle use.",
-          "gallons": 1.0,
-          "avg_gallons": 13.6
         }
       ],
-      "flag_count": 2
+      "flag_count": 1
     },
     {
       "transaction_date": "2026-03-25",
@@ -12304,16 +11970,9 @@
           "flag": 3,
           "flag_name": "Missing Odometer",
           "reason": "No odometer reading was entered at the time of this fill."
-        },
-        {
-          "flag": 4,
-          "flag_name": "Unusually Small Fill",
-          "reason": "This fill of 1.0 gallons is unusually small compared to this vehicle's average fill of 14.7 gallons. Could indicate personal vehicle use.",
-          "gallons": 1.0,
-          "avg_gallons": 14.7
         }
       ],
-      "flag_count": 2
+      "flag_count": 1
     },
     {
       "transaction_date": "2026-03-24",
@@ -12338,16 +11997,9 @@
           "flag": 3,
           "flag_name": "Missing Odometer",
           "reason": "No odometer reading was entered at the time of this fill."
-        },
-        {
-          "flag": 4,
-          "flag_name": "Unusually Small Fill",
-          "reason": "This fill of 1.0 gallons is unusually small compared to this vehicle's average fill of 15.1 gallons. Could indicate personal vehicle use.",
-          "gallons": 1.0,
-          "avg_gallons": 15.1
         }
       ],
-      "flag_count": 2
+      "flag_count": 1
     },
     {
       "transaction_date": "2026-03-24",
@@ -12399,16 +12051,9 @@
           "flag": 3,
           "flag_name": "Missing Odometer",
           "reason": "No odometer reading was entered at the time of this fill."
-        },
-        {
-          "flag": 4,
-          "flag_name": "Unusually Small Fill",
-          "reason": "This fill of 1.0 gallons is unusually small compared to this vehicle's average fill of 16.1 gallons. Could indicate personal vehicle use.",
-          "gallons": 1.0,
-          "avg_gallons": 16.1
         }
       ],
-      "flag_count": 2
+      "flag_count": 1
     },
     {
       "transaction_date": "2026-03-25",
@@ -12433,16 +12078,9 @@
           "flag": 3,
           "flag_name": "Missing Odometer",
           "reason": "No odometer reading was entered at the time of this fill."
-        },
-        {
-          "flag": 4,
-          "flag_name": "Unusually Small Fill",
-          "reason": "This fill of 1.0 gallons is unusually small compared to this vehicle's average fill of 15.5 gallons. Could indicate personal vehicle use.",
-          "gallons": 1.0,
-          "avg_gallons": 15.5
         }
       ],
-      "flag_count": 2
+      "flag_count": 1
     },
     {
       "transaction_date": "2026-03-24",
@@ -12467,16 +12105,9 @@
           "flag": 3,
           "flag_name": "Missing Odometer",
           "reason": "No odometer reading was entered at the time of this fill."
-        },
-        {
-          "flag": 4,
-          "flag_name": "Unusually Small Fill",
-          "reason": "This fill of 1.0 gallons is unusually small compared to this vehicle's average fill of 10.2 gallons. Could indicate personal vehicle use.",
-          "gallons": 1.0,
-          "avg_gallons": 10.2
         }
       ],
-      "flag_count": 2
+      "flag_count": 1
     },
     {
       "transaction_date": "2026-03-24",
@@ -12501,16 +12132,9 @@
           "flag": 3,
           "flag_name": "Missing Odometer",
           "reason": "No odometer reading was entered at the time of this fill."
-        },
-        {
-          "flag": 4,
-          "flag_name": "Unusually Small Fill",
-          "reason": "This fill of 1.0 gallons is unusually small compared to this vehicle's average fill of 13.2 gallons. Could indicate personal vehicle use.",
-          "gallons": 1.0,
-          "avg_gallons": 13.2
         }
       ],
-      "flag_count": 2
+      "flag_count": 1
     },
     {
       "transaction_date": "2026-03-24",
@@ -12535,16 +12159,9 @@
           "flag": 3,
           "flag_name": "Missing Odometer",
           "reason": "No odometer reading was entered at the time of this fill."
-        },
-        {
-          "flag": 4,
-          "flag_name": "Unusually Small Fill",
-          "reason": "This fill of 1.0 gallons is unusually small compared to this vehicle's average fill of 13.2 gallons. Could indicate personal vehicle use.",
-          "gallons": 1.0,
-          "avg_gallons": 13.2
         }
       ],
-      "flag_count": 2
+      "flag_count": 1
     },
     {
       "transaction_date": "2026-03-24",
@@ -12569,16 +12186,9 @@
           "flag": 3,
           "flag_name": "Missing Odometer",
           "reason": "No odometer reading was entered at the time of this fill."
-        },
-        {
-          "flag": 4,
-          "flag_name": "Unusually Small Fill",
-          "reason": "This fill of 1.0 gallons is unusually small compared to this vehicle's average fill of 10.7 gallons. Could indicate personal vehicle use.",
-          "gallons": 1.0,
-          "avg_gallons": 10.7
         }
       ],
-      "flag_count": 2
+      "flag_count": 1
     },
     {
       "transaction_date": "2026-03-25",
@@ -12603,16 +12213,9 @@
           "flag": 3,
           "flag_name": "Missing Odometer",
           "reason": "No odometer reading was entered at the time of this fill."
-        },
-        {
-          "flag": 4,
-          "flag_name": "Unusually Small Fill",
-          "reason": "This fill of 1.0 gallons is unusually small compared to this vehicle's average fill of 20.7 gallons. Could indicate personal vehicle use.",
-          "gallons": 1.0,
-          "avg_gallons": 20.7
         }
       ],
-      "flag_count": 2
+      "flag_count": 1
     }
   ],
   "temporary_cards": [
