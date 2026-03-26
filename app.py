@@ -295,15 +295,30 @@ def index():
     report = load_report()
     user = get_current_user()
 
+    all_group_summary = report.get("group_summary", {})
+
     if user["role"] == "admin":
-        groups = sorted(report.get("group_summary", {}).keys())
+        groups = sorted(all_group_summary.keys())
+        summary = report.get("summary", {})
     else:
+        # Managers: filter stats to their group only
         assigned = user.get("fleet_group")
-        groups = [assigned] if assigned and assigned in report.get("group_summary", {}) else []
+        groups = [assigned] if assigned and assigned in all_group_summary else []
+        if groups:
+            gs = all_group_summary.get(assigned, {})
+            summary = {
+                "total_vehicle_transactions_analyzed": gs.get("total_txns", 0),
+                "total_flagged_transactions": gs.get("flagged_txns", 0),
+                "total_flags": gs.get("flagged_txns", 0),
+                "total_fill_events": gs.get("total_txns", 0),
+                "total_spend": gs.get("total_spend", 0),
+            }
+        else:
+            summary = {}
 
     return render_template("index.html", groups=groups,
-                           summary=report.get("summary", {}),
-                           group_summary=report.get("group_summary", {}),
+                           summary=summary,
+                           group_summary=all_group_summary,
                            active_review=active)
 
 
