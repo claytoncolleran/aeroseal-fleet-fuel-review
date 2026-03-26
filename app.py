@@ -13,6 +13,7 @@ import json
 import os
 import sys
 from datetime import datetime
+import db as database
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "dev-secret-key-change-in-production")
@@ -28,6 +29,8 @@ PERSIST_DIR = "/var/data" if os.path.isdir("/var/data") else DATA_DIR
 USERS_FILE = os.path.join(PERSIST_DIR, "users.json")
 REVIEWS_DIR = os.path.join(PERSIST_DIR, "reviews")
 os.makedirs(REVIEWS_DIR, exist_ok=True)
+
+USE_DB = database.use_db()
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -58,6 +61,8 @@ def save_review_meta(period, meta):
 
 def list_reviews():
     """List all review periods, most recent first."""
+    if USE_DB:
+        return database.db_list_reviews()
     reviews = []
     if os.path.isdir(REVIEWS_DIR):
         for name in sorted(os.listdir(REVIEWS_DIR), reverse=True):
@@ -69,6 +74,8 @@ def list_reviews():
 
 def get_active_review():
     """Get the most recent review that is in 'in_review' status, or the latest."""
+    if USE_DB:
+        return database.db_get_active_review()
     reviews = list_reviews()
     for r in reviews:
         if r.get("status") == "in_review":
@@ -99,11 +106,22 @@ def load_report(period=None):
 
 
 def load_decisions(period=None):
-    """Load review_decisions.json for a period."""
+    """Load review decisions for a period."""
+    if USE_DB:
+        if not period:
+            active = get_active_review()
+            if not active:
+                return {}
+            period = active["period"]
+        review_id = database.db_get_review_id(period)
+        if review_id:
+            return database.db_get_decisions(review_id)
+        return {}
+
+    # JSON fallback
     if not period:
         active = get_active_review()
         if not active:
-            # Fall back to legacy
             legacy = os.path.join(PERSIST_DIR, "review_decisions.json")
             if os.path.exists(legacy):
                 with open(legacy) as f:
@@ -119,13 +137,15 @@ def load_decisions(period=None):
 
 
 def save_decisions(decisions, period=None):
-    """Save review_decisions.json for a period."""
+    """Save review_decisions.json for a period (JSON fallback only)."""
+    if USE_DB:
+        return  # DB writes happen directly in route handlers
+
     if not period:
         active = get_active_review()
         if active:
             period = active["period"]
         else:
-            # Fall back to legacy
             with open(os.path.join(PERSIST_DIR, "review_decisions.json"), "w") as f:
                 json.dump(decisions, f, indent=2)
             return
@@ -141,6 +161,8 @@ def save_decisions(decisions, period=None):
 # ═══════════════════════════════════════════════════════════════════════════════
 
 def load_users():
+    if USE_DB:
+        return database.db_get_users()
     if os.path.exists(USERS_FILE):
         with open(USERS_FILE) as f:
             return json.load(f)
@@ -148,28 +170,37 @@ def load_users():
 
 
 def save_users(users):
+    if USE_DB:
+        return  # DB writes happen directly in route handlers
     with open(USERS_FILE, "w") as f:
         json.dump(users, f, indent=2)
 
 
 def init_default_admin():
-    """Create default admin account if no users exist. Wipes old username-keyed users."""
-    users = load_users()
-    if users and not any("@" in k for k in users.keys()):
-        print("  Migrating users.json from username to email format (old accounts cleared)")
-        users = {}
-    if not users:
-        default_email = os.environ.get("ADMIN_DEFAULT_EMAIL", "admin@aeroseal.com")
-        default_pw = os.environ.get("ADMIN_DEFAULT_PASSWORD", "changeme")
-        users[default_email] = {
-            "password_hash": generate_password_hash(default_pw, method="pbkdf2:sha256"),
-            "role": "admin",
-            "display_name": "Administrator",
-            "fleet_group": None,
-            "created_at": datetime.now().isoformat(),
-        }
-        save_users(users)
-        print(f"  Default admin account created (email: {default_email})")
+    """Create default admin account if no users exist."""
+    default_email = os.environ.get("ADMIN_DEFAULT_EMAIL", "admin@aeroseal.com")
+    default_pw = os.environ.get("ADMIN_DEFAULT_PASSWORD", "changeme")
+    pw_hash = generate_password_hash(default_pw, method="pbkdf2:sha256")
+
+    if USE_DB:
+        if database.db_user_count() == 0:
+            database.db_create_user(default_email, pw_hash, "Administrator", "admin", None)
+            print(f"  Default admin account created in DB (email: {default_email})")
+    else:
+        users = load_users()
+        if users and not any("@" in k for k in users.keys()):
+            print("  Migrating users.json from username to email format (old accounts cleared)")
+            users = {}
+        if not users:
+            users[default_email] = {
+                "password_hash": pw_hash,
+                "role": "admin",
+                "display_name": "Administrator",
+                "fleet_group": None,
+                "created_at": datetime.now().isoformat(),
+            }
+            save_users(users)
+            print(f"  Default admin account created (email: {default_email})")
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -333,18 +364,24 @@ def submit_decision():
     txn_key = data.get("txn_key")
     action = data.get("action")
     reason = data.get("reason", "")
+    reviewer = session.get("display_name", session.get("email", ""))
 
-    decisions = load_decisions()
-    if group_name not in decisions:
-        decisions[group_name] = {}
+    if USE_DB:
+        active = get_active_review()
+        if active:
+            review_id = database.db_get_review_id(active["period"])
+            if review_id:
+                database.db_save_decision(review_id, txn_key, group_name, action, reason, reviewer)
+    else:
+        decisions = load_decisions()
+        if group_name not in decisions:
+            decisions[group_name] = {}
+        decisions[group_name][txn_key] = {
+            "action": action, "reason": reason,
+            "reviewer": reviewer, "timestamp": datetime.now().isoformat(),
+        }
+        save_decisions(decisions)
 
-    decisions[group_name][txn_key] = {
-        "action": action,
-        "reason": reason,
-        "reviewer": session.get("display_name", session.get("email", "")),
-        "timestamp": datetime.now().isoformat(),
-    }
-    save_decisions(decisions)
     return jsonify({"status": "ok"})
 
 
@@ -354,18 +391,24 @@ def submit_group():
     data = request.json
     group_name = data.get("group_name")
     manager_name = data.get("manager_name", "")
+    submitted_by = session.get("email", "")
 
-    decisions = load_decisions()
-    if group_name not in decisions:
-        decisions[group_name] = {}
+    if USE_DB:
+        active = get_active_review()
+        if active:
+            review_id = database.db_get_review_id(active["period"])
+            if review_id:
+                database.db_save_group_submission(review_id, group_name, manager_name, submitted_by)
+    else:
+        decisions = load_decisions()
+        if group_name not in decisions:
+            decisions[group_name] = {}
+        decisions[group_name]["_submission"] = {
+            "manager_name": manager_name, "submitted_by": submitted_by,
+            "submitted_at": datetime.now().isoformat(), "status": "submitted",
+        }
+        save_decisions(decisions)
 
-    decisions[group_name]["_submission"] = {
-        "manager_name": manager_name,
-        "submitted_by": session.get("email", ""),
-        "submitted_at": datetime.now().isoformat(),
-        "status": "submitted",
-    }
-    save_decisions(decisions)
     return jsonify({"status": "ok"})
 
 
@@ -515,22 +558,25 @@ def generate_report():
 def admin_approve():
     data = request.json
     admin_name = data.get("admin_name", "")
-
-    decisions = load_decisions()
-    decisions["_admin_approval"] = {
-        "admin_name": admin_name,
-        "approved_by": session.get("email", ""),
-        "approved_at": datetime.now().isoformat(),
-        "status": "approved",
-    }
-    save_decisions(decisions)
-
-    # Mark review as complete
+    approved_by = session.get("email", "")
     active = get_active_review()
-    if active:
-        active["status"] = "complete"
-        active["completed_at"] = datetime.now().isoformat()
-        save_review_meta(active["period"], active)
+
+    if USE_DB and active:
+        review_id = database.db_get_review_id(active["period"])
+        if review_id:
+            database.db_save_admin_approval(review_id, admin_name, approved_by)
+            database.db_update_review(active["period"], status="complete", completed_at=datetime.now())
+    else:
+        decisions = load_decisions()
+        decisions["_admin_approval"] = {
+            "admin_name": admin_name, "approved_by": approved_by,
+            "approved_at": datetime.now().isoformat(), "status": "approved",
+        }
+        save_decisions(decisions)
+        if active:
+            active["status"] = "complete"
+            active["completed_at"] = datetime.now().isoformat()
+            save_review_meta(active["period"], active)
 
     return jsonify({"status": "ok"})
 
@@ -594,18 +640,21 @@ def create_review():
     file.save(upload_path)
 
     # Mark any existing in_review as complete
-    for r in list_reviews():
-        if r.get("status") == "in_review" and r["period"] != period:
-            r["status"] = "complete"
-            r["completed_at"] = datetime.now().isoformat()
-            save_review_meta(r["period"], r)
+    if USE_DB:
+        database.db_complete_other_reviews(period)
+    else:
+        for r in list_reviews():
+            if r.get("status") == "in_review" and r["period"] != period:
+                r["status"] = "complete"
+                r["completed_at"] = datetime.now().isoformat()
+                save_review_meta(r["period"], r)
 
     # Run anomaly detection
     output_path = os.path.join(review_dir, "anomaly_report.json")
     try:
         sys.path.insert(0, TOOLS_DIR)
         from anomaly_detection import run as run_anomaly
-        run_anomaly(
+        report = run_anomaly(
             corpay_file=upload_path,
             baselines_file=BASELINES_FILE,
             output_file=output_path,
@@ -613,24 +662,54 @@ def create_review():
     except Exception as e:
         return jsonify({"status": "error", "message": f"Processing failed: {str(e)}"}), 500
 
-    # Initialize empty decisions
-    decisions_path = os.path.join(review_dir, "review_decisions.json")
-    with open(decisions_path, "w") as f:
-        json.dump({}, f)
+    created_by = session.get("email", "")
 
-    # Save meta
-    meta = {
-        "period": period,
-        "label": label or f"{period} Fuel Review",
-        "status": "in_review",
-        "deadline": deadline or None,
-        "created_by": session.get("email", ""),
-        "created_at": datetime.now().isoformat(),
-        "processed_at": datetime.now().isoformat(),
-        "notifications_sent_at": None,
-        "completed_at": None,
-    }
-    save_review_meta(period, meta)
+    if USE_DB:
+        # Create review in database
+        review_id = database.db_create_review(period, label or f"{period} Fuel Review",
+                                               deadline, created_by)
+        # Write transactions and flags to database
+        if report:
+            all_txns = report.get("transactions", [])
+            temp_cards = report.get("temporary_cards", [])
+            declined = report.get("declined_transactions", [])
+
+            # Tag card types for DB storage
+            for t in all_txns:
+                t["card_type"] = "vehicle"
+            for t in temp_cards:
+                t["card_type"] = "temporary"
+                t["flag_count"] = 0
+                t["flags"] = []
+            for t in declined:
+                t["card_type"] = "declined"
+                t["flag_count"] = 0
+                t["flags"] = []
+
+            database.db_insert_transactions(review_id, all_txns + temp_cards + declined)
+
+            # Write vehicle MPG data
+            mpg_data = report.get("mpg_summary_by_vehicle", {})
+            if mpg_data:
+                database.db_insert_vehicle_mpg(review_id, mpg_data)
+    else:
+        # JSON fallback
+        decisions_path = os.path.join(review_dir, "review_decisions.json")
+        with open(decisions_path, "w") as f:
+            json.dump({}, f)
+
+        meta = {
+            "period": period,
+            "label": label or f"{period} Fuel Review",
+            "status": "in_review",
+            "deadline": deadline or None,
+            "created_by": created_by,
+            "created_at": datetime.now().isoformat(),
+            "processed_at": datetime.now().isoformat(),
+            "notifications_sent_at": None,
+            "completed_at": None,
+        }
+        save_review_meta(period, meta)
 
     return jsonify({"status": "ok", "period": period})
 
@@ -674,8 +753,11 @@ def send_notifications(period):
             errors.append(f"{email}: {str(e)}")
 
     # Update meta
-    meta["notifications_sent_at"] = datetime.now().isoformat()
-    save_review_meta(period, meta)
+    if USE_DB:
+        database.db_update_review(period, notifications_sent_at=datetime.now())
+    else:
+        meta["notifications_sent_at"] = datetime.now().isoformat()
+        save_review_meta(period, meta)
 
     if errors:
         return jsonify({"status": "partial", "sent": sent, "errors": errors})
@@ -807,7 +889,7 @@ def admin_users():
 @admin_required
 def create_user():
     data = request.json
-    email = data.get("username", "").strip().lower()  # "username" key from JS form
+    email = data.get("username", "").strip().lower()
     password = data.get("password", "")
     role = data.get("role", "manager")
     display_name = data.get("display_name", "")
@@ -816,19 +898,26 @@ def create_user():
     if not email or not password:
         return jsonify({"status": "error", "message": "Email and password required."}), 400
 
-    users = load_users()
-    if email in users:
-        return jsonify({"status": "error", "message": "Email already exists."}), 400
+    if USE_DB:
+        if database.db_user_exists(email):
+            return jsonify({"status": "error", "message": "Email already exists."}), 400
+        pw_hash = generate_password_hash(password, method="pbkdf2:sha256")
+        database.db_create_user(email, pw_hash, display_name or email, role,
+                                fleet_group if role == "manager" else None,
+                                session.get("email", ""))
+    else:
+        users = load_users()
+        if email in users:
+            return jsonify({"status": "error", "message": "Email already exists."}), 400
+        users[email] = {
+            "password_hash": generate_password_hash(password, method="pbkdf2:sha256"),
+            "role": role, "display_name": display_name or email,
+            "fleet_group": fleet_group if role == "manager" else None,
+            "created_at": datetime.now().isoformat(),
+            "created_by": session.get("email", ""),
+        }
+        save_users(users)
 
-    users[email] = {
-        "password_hash": generate_password_hash(password, method="pbkdf2:sha256"),
-        "role": role,
-        "display_name": display_name or email,
-        "fleet_group": fleet_group if role == "manager" else None,
-        "created_at": datetime.now().isoformat(),
-        "created_by": session.get("email", ""),
-    }
-    save_users(users)
     return jsonify({"status": "ok"})
 
 
@@ -836,24 +925,37 @@ def create_user():
 @admin_required
 def update_user(username):
     data = request.json
-    users = load_users()
 
-    if username not in users:
-        return jsonify({"status": "error", "message": "User not found."}), 404
+    if USE_DB:
+        if not database.db_user_exists(username):
+            return jsonify({"status": "error", "message": "User not found."}), 404
+        kwargs = {"updated_by": session.get("email", "")}
+        if data.get("display_name"):
+            kwargs["display_name"] = data["display_name"]
+        if data.get("role"):
+            kwargs["role"] = data["role"]
+        if data.get("fleet_group") is not None:
+            kwargs["fleet_group"] = data["fleet_group"]
+        if data.get("password"):
+            kwargs["password_hash"] = generate_password_hash(data["password"], method="pbkdf2:sha256")
+        database.db_update_user(username, **kwargs)
+    else:
+        users = load_users()
+        if username not in users:
+            return jsonify({"status": "error", "message": "User not found."}), 404
+        user = users[username]
+        if data.get("display_name"):
+            user["display_name"] = data["display_name"]
+        if data.get("role"):
+            user["role"] = data["role"]
+        if data.get("fleet_group") is not None:
+            user["fleet_group"] = data["fleet_group"] if user["role"] == "manager" else None
+        if data.get("password"):
+            user["password_hash"] = generate_password_hash(data["password"], method="pbkdf2:sha256")
+        user["updated_at"] = datetime.now().isoformat()
+        user["updated_by"] = session.get("email", "")
+        save_users(users)
 
-    user = users[username]
-    if data.get("display_name"):
-        user["display_name"] = data["display_name"]
-    if data.get("role"):
-        user["role"] = data["role"]
-    if data.get("fleet_group") is not None:
-        user["fleet_group"] = data["fleet_group"] if user["role"] == "manager" else None
-    if data.get("password"):
-        user["password_hash"] = generate_password_hash(data["password"], method="pbkdf2:sha256")
-
-    user["updated_at"] = datetime.now().isoformat()
-    user["updated_by"] = session.get("email", "")
-    save_users(users)
     return jsonify({"status": "ok"})
 
 
@@ -863,12 +965,17 @@ def delete_user(username):
     if username == session.get("email"):
         return jsonify({"status": "error", "message": "Cannot delete your own account."}), 400
 
-    users = load_users()
-    if username not in users:
-        return jsonify({"status": "error", "message": "User not found."}), 404
+    if USE_DB:
+        if not database.db_user_exists(username):
+            return jsonify({"status": "error", "message": "User not found."}), 404
+        database.db_delete_user(username)
+    else:
+        users = load_users()
+        if username not in users:
+            return jsonify({"status": "error", "message": "User not found."}), 404
+        del users[username]
+        save_users(users)
 
-    del users[username]
-    save_users(users)
     return jsonify({"status": "ok"})
 
 
@@ -876,6 +983,11 @@ def delete_user(username):
 # STARTUP
 # ═══════════════════════════════════════════════════════════════════════════════
 
+if USE_DB:
+    database.init_db()
+    print("  Database mode: PostgreSQL")
+else:
+    print("  Database mode: JSON files (no DATABASE_URL)")
 init_default_admin()
 
 if __name__ == "__main__":
