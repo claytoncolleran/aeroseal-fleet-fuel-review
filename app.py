@@ -749,6 +749,7 @@ def _send_email(api_key, from_email, to_email, subject, html):
         headers={
             "Authorization": f"Bearer {api_key}",
             "Content-Type": "application/json",
+            "User-Agent": "AerosealFleetReview/1.0",
         },
         method="POST",
     )
