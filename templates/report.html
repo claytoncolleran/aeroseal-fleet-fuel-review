@@ -229,29 +229,6 @@
     </tbody>
   </table>
 
-  <!-- Vehicles Flagged for Low MPG -->
-  {% if flagged_vehicles %}
-  <h2>Vehicles Flagged for Low Fuel Efficiency (Flag 1)</h2>
-  <table>
-    <thead>
-      <tr><th>Vehicle</th><th>Period MPG</th><th>Baseline MPG</th><th>Variance</th><th>Miles</th><th>Gallons</th><th>Fills</th></tr>
-    </thead>
-    <tbody>
-      {% for vname, ms in flagged_vehicles|dictsort %}
-      <tr>
-        <td><strong>{{ vname }}</strong></td>
-        <td><strong style="color: #C62828;">{{ ms.period_mpg }}</strong></td>
-        <td>{{ ms.baseline_mpg or '—' }}</td>
-        <td style="color: #C62828;">{{ ms.pct_diff }}%</td>
-        <td>{{ "{:,}".format(ms.total_miles) }}</td>
-        <td>{{ ms.total_gallons }}</td>
-        <td>{{ ms.fill_count }}</td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-  {% endif %}
-
   <!-- Denied Items Detail -->
   {% set all_denied = [] %}
   {% for g in group_data %}
