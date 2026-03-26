@@ -4,7 +4,13 @@
 <div class="page-header">
   <p style="margin-bottom: 4px;"><a href="/">&larr; Back to Dashboard</a></p>
   <h1>{{ group_name }}</h1>
-  <p>Fleet manager review &mdash; review all flagged items, then submit</p>
+  <p>
+    {% if active_review %}{{ active_review.label or active_review.period }} &mdash; {% endif %}
+    Review all flagged items, then submit
+    {% if active_review and active_review.deadline %}
+      <span style="color: #E65100; font-weight: 600;"> &middot; Due: {{ active_review.deadline }}</span>
+    {% endif %}
+  </p>
 </div>
 
 <div class="stats-row">

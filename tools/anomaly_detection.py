@@ -10,18 +10,18 @@ import os
 from datetime import datetime, timedelta
 from collections import defaultdict
 
-# ─── Paths ───────────────────────────────────────────────────────────────────
+# ─── Default Paths (used when run from command line) ─────────────────────────
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA_DIR = os.path.join(BASE_DIR, "data")
-CORPAY_FILE = os.path.join(DATA_DIR, "Corpay_Transactions.xlsx")
-BASELINES_FILE = os.path.join(DATA_DIR, "mpg_baselines.json")
-OUTPUT_FILE = os.path.join(DATA_DIR, "anomaly_report.json")
+DEFAULT_CORPAY_FILE = os.path.join(DATA_DIR, "Corpay_Transactions.xlsx")
+DEFAULT_BASELINES_FILE = os.path.join(DATA_DIR, "mpg_baselines.json")
+DEFAULT_OUTPUT_FILE = os.path.join(DATA_DIR, "anomaly_report.json")
 
 
 # ─── Load Corpay Data ────────────────────────────────────────────────────────
-def load_corpay():
+def load_corpay(corpay_file=None):
     import openpyxl
-    wb = openpyxl.load_workbook(CORPAY_FILE, read_only=True)
+    wb = openpyxl.load_workbook(corpay_file or DEFAULT_CORPAY_FILE, read_only=True)
     ws = wb.active
     rows = list(ws.iter_rows(values_only=True))
     headers = rows[0]
@@ -556,9 +556,18 @@ def check_flag6(txn, vehicle):
 
 
 # ─── Main ────────────────────────────────────────────────────────────────────
-def run():
+def run(corpay_file=None, baselines_file=None, output_file=None):
+    """
+    Run the full anomaly detection pipeline.
+    All paths are optional — defaults to the standard data/ directory.
+    Returns the report dict (also saves to output_file).
+    """
+    _corpay = corpay_file or DEFAULT_CORPAY_FILE
+    _baselines = baselines_file or DEFAULT_BASELINES_FILE
+    _output = output_file or DEFAULT_OUTPUT_FILE
+
     print("Loading Corpay transactions...")
-    corpay_rows = load_corpay()
+    corpay_rows = load_corpay(_corpay)
     print(f"  {len(corpay_rows)} rows loaded")
 
     print("Loading Fleetio vehicles...")
@@ -566,7 +575,7 @@ def run():
     print(f"  {len(fleetio_vehicles)} vehicles loaded")
 
     print("Loading MPG baselines...")
-    with open(BASELINES_FILE) as f:
+    with open(_baselines) as f:
         baselines = json.load(f)
     print(f"  {len(baselines['vehicles'])} baselines loaded")
 
@@ -853,7 +862,7 @@ def run():
         "declined_transactions": declined_records,
     }
 
-    with open(OUTPUT_FILE, "w") as f:
+    with open(_output, "w") as f:
         json.dump(report, f, indent=2, default=str)
 
     # ── Print results ──
@@ -904,7 +913,7 @@ def run():
             print(f"    {g}: {gs['flagged_txns']}/{gs['total_txns']} flagged "
                   f"(${gs['total_spend']:,.2f} spend) [{flags_str}]")
 
-    print(f"\n  Report saved to: {OUTPUT_FILE}")
+    print(f"\n  Report saved to: {_output}")
     return report
 
 

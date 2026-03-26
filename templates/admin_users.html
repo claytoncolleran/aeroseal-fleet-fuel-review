@@ -14,8 +14,8 @@
   <div id="create-success" class="section-banner banner-info" style="display: none; margin-bottom: 12px;"></div>
   <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr auto; gap: 12px; align-items: end;">
     <div>
-      <label class="form-label" style="display: block; font-size: 12px; font-weight: 600; color: var(--aeroseal-midnight-blue); margin-bottom: 4px;">Username</label>
-      <input type="text" id="new-username" class="form-input" placeholder="jsmith" style="font-size: 14px; padding: 10px 12px; border: 1px solid var(--aeroseal-titanium); border-radius: 6px; width: 100%;">
+      <label class="form-label" style="display: block; font-size: 12px; font-weight: 600; color: var(--aeroseal-midnight-blue); margin-bottom: 4px;">Email</label>
+      <input type="email" id="new-email" class="form-input" placeholder="jsmith@aeroseal.com" style="font-size: 14px; padding: 10px 12px; border: 1px solid var(--aeroseal-titanium); border-radius: 6px; width: 100%;">
     </div>
     <div>
       <label class="form-label" style="display: block; font-size: 12px; font-weight: 600; color: var(--aeroseal-midnight-blue); margin-bottom: 4px;">Display Name</label>
@@ -56,7 +56,7 @@
   <table class="txn-table">
     <thead>
       <tr>
-        <th>Username</th>
+        <th>Email</th>
         <th>Display Name</th>
         <th>Role</th>
         <th>Fleet Group</th>
@@ -79,7 +79,7 @@
         <td>{{ user.get('fleet_group', '—') or '—' }}</td>
         <td style="font-size: 12px; color: #5A6B7B;">{{ (user.get('created_at', '')[:10]) }}</td>
         <td>
-          {% if username != current_user.username %}
+          {% if username != current_user.email %}
             <button class="btn btn-sm" style="font-size: 11px; padding: 4px 12px; background: transparent; color: var(--aeroseal-sapphire); border: 1px solid var(--aeroseal-sapphire); border-radius: 4px; cursor: pointer;" onclick="resetPassword('{{ username }}')">Reset Password</button>
             <button class="btn btn-sm" style="font-size: 11px; padding: 4px 12px; background: transparent; color: #C62828; border: 1px solid #C62828; border-radius: 4px; cursor: pointer; margin-left: 4px;" onclick="deleteUser('{{ username }}')">Delete</button>
           {% else %}
@@ -109,7 +109,7 @@ function showMsg(id, msg) {
 
 function createUser() {
   const data = {
-    username: document.getElementById('new-username').value.trim(),
+    username: document.getElementById('new-email').value.trim(),
     display_name: document.getElementById('new-display').value.trim(),
     role: document.getElementById('new-role').value,
     fleet_group: document.getElementById('new-group').value,

@@ -3,7 +3,14 @@
 {% block content %}
 <div class="page-header">
   <h1>Fuel Review Dashboard</h1>
-  <p>Monthly fuel transaction review and approval workflow &mdash; {{ summary.get("total_vehicle_transactions_analyzed", 0) }} transactions analyzed</p>
+  {% if active_review %}
+  <p><strong>{{ active_review.label or active_review.period }}</strong> &mdash;
+     {{ summary.get("total_vehicle_transactions_analyzed", 0) }} transactions analyzed
+     {% if active_review.deadline %} &middot; <span style="color: #E65100;">Due: {{ active_review.deadline }}</span>{% endif %}
+  </p>
+  {% else %}
+  <p>No active review. {% if current_user and current_user.role == 'admin' %}<a href="/admin/reviews">Start a new review &rarr;</a>{% else %}Check back soon.{% endif %}</p>
+  {% endif %}
 </div>
 
 <div class="stats-row">

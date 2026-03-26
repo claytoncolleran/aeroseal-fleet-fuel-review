@@ -1,0 +1,207 @@
+{% extends "base.html" %}
+{% block title %}Review Management{% endblock %}
+{% block content %}
+<div class="page-header">
+  <p style="margin-bottom: 4px;"><a href="/admin">&larr; Back to Admin</a></p>
+  <h1>Review Management</h1>
+  <p>Upload monthly Corpay reports, process anomaly detection, and notify fleet managers</p>
+</div>
+
+<!-- ═══ Start New Review ═══ -->
+<div class="card" style="padding: 24px; margin-bottom: 24px;">
+  <h2 style="font-size: 16px; font-weight: 700; color: var(--aeroseal-steel-blue); margin-bottom: 16px;">Start New Monthly Review</h2>
+  <div id="upload-error" class="section-banner banner-warn" style="display: none; margin-bottom: 12px;"></div>
+  <div id="upload-success" class="section-banner banner-info" style="display: none; margin-bottom: 12px;"></div>
+
+  <form id="review-form" style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 16px; align-items: end;">
+    <div>
+      <label class="form-label" style="display: block; font-size: 12px; font-weight: 600; color: var(--aeroseal-midnight-blue); margin-bottom: 4px;">Corpay Spreadsheet</label>
+      <input type="file" id="corpay-file" accept=".xlsx,.xls" style="font-family: var(--font-primary); font-size: 13px;">
+    </div>
+    <div>
+      <label class="form-label" style="display: block; font-size: 12px; font-weight: 600; color: var(--aeroseal-midnight-blue); margin-bottom: 4px;">Period (YYYY-MM)</label>
+      <input type="month" id="review-period" style="font-family: var(--font-primary); font-size: 14px; padding: 10px 12px; border: 1px solid var(--aeroseal-titanium); border-radius: 6px; width: 100%;">
+    </div>
+    <div>
+      <label class="form-label" style="display: block; font-size: 12px; font-weight: 600; color: var(--aeroseal-midnight-blue); margin-bottom: 4px;">Review Label</label>
+      <input type="text" id="review-label" placeholder="March 2026 Fuel Review" style="font-family: var(--font-primary); font-size: 14px; padding: 10px 12px; border: 1px solid var(--aeroseal-titanium); border-radius: 6px; width: 100%;">
+    </div>
+    <div>
+      <label class="form-label" style="display: block; font-size: 12px; font-weight: 600; color: var(--aeroseal-midnight-blue); margin-bottom: 4px;">Review Deadline</label>
+      <input type="date" id="review-deadline" style="font-family: var(--font-primary); font-size: 14px; padding: 10px 12px; border: 1px solid var(--aeroseal-titanium); border-radius: 6px; width: 100%;">
+    </div>
+  </form>
+  <div style="margin-top: 16px;">
+    <button class="btn-submit" id="process-btn" onclick="processReview()">Upload &amp; Process</button>
+    <span id="process-status" style="font-size: 13px; color: #5A6B7B; margin-left: 12px;"></span>
+  </div>
+</div>
+
+<!-- ═══ Active Review ═══ -->
+{% if active %}
+<div class="card" style="padding: 24px; margin-bottom: 24px; border-left: 4px solid var(--aeroseal-sapphire);">
+  <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+    <div>
+      <h2 style="font-size: 16px; font-weight: 700; color: var(--aeroseal-steel-blue); margin-bottom: 4px;">
+        Active: {{ active.label or active.period }}
+      </h2>
+      <div style="font-size: 13px; color: #5A6B7B;">
+        Period: {{ active.period }} &middot;
+        Status: <span style="font-weight: 600; color: var(--aeroseal-sapphire);">{{ active.status }}</span>
+        {% if active.deadline %} &middot; Deadline: <strong>{{ active.deadline }}</strong>{% endif %}
+      </div>
+      {% if progress %}
+      <div style="margin-top: 12px;">
+        <div style="font-size: 13px; color: #5A6B7B; margin-bottom: 4px;">
+          <strong>{{ progress.submitted }}</strong> of <strong>{{ progress.total }}</strong> groups submitted ({{ progress.pct }}%)
+        </div>
+        <div style="background: #E8ECF0; border-radius: 4px; height: 8px; overflow: hidden;">
+          <div style="background: var(--aeroseal-sapphire); height: 100%; width: {{ progress.pct }}%; border-radius: 4px; transition: width 0.3s;"></div>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+    <div style="display: flex; gap: 8px;">
+      <button class="btn btn-approve" style="padding: 8px 20px; font-size: 13px;" onclick="sendNotifications('{{ active.period }}')">
+        {% if active.notifications_sent_at %}Resend Notifications{% else %}Send Notifications{% endif %}
+      </button>
+      <button class="btn btn-deny" style="padding: 8px 20px; font-size: 13px; background: transparent; color: #E65100; border: 1.5px solid #E65100;" onclick="sendReminders('{{ active.period }}')">Send Reminders</button>
+    </div>
+  </div>
+  {% if active.notifications_sent_at %}
+  <div style="font-size: 12px; color: #999; margin-top: 8px;">
+    Notifications last sent: {{ active.notifications_sent_at[:16].replace('T', ' at ') }}
+  </div>
+  {% endif %}
+  <div id="notify-status" style="font-size: 13px; margin-top: 8px;"></div>
+</div>
+{% endif %}
+
+<!-- ═══ Archive ═══ -->
+<h2 style="font-size: 18px; font-weight: 700; color: var(--aeroseal-steel-blue); margin: 24px 0 12px;">
+  Review Archive ({{ reviews|length }})
+</h2>
+
+{% for review in reviews %}
+<div class="group-status-card {% if review.status == 'complete' %}submitted{% elif review.status == 'in_review' %}pending{% endif %}" style="margin-bottom: 8px;">
+  <div style="flex: 1;">
+    <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 4px;">
+      <h3 style="font-size: 15px; font-weight: 600; color: var(--aeroseal-midnight-blue);">{{ review.label or review.period }}</h3>
+      {% if review.status == 'complete' %}
+        <span class="status-badge status-submitted">Complete</span>
+      {% elif review.status == 'in_review' %}
+        <span class="status-badge status-pending">In Review</span>
+      {% else %}
+        <span class="status-badge" style="background: #E8ECF0; color: #5A6B7B;">{{ review.status }}</span>
+      {% endif %}
+    </div>
+    <div style="font-size: 12px; color: #5A6B7B;">
+      Period: {{ review.period }}
+      {% if review.deadline %} &middot; Deadline: {{ review.deadline }}{% endif %}
+      &middot; Created: {{ review.created_at[:10] }}
+      {% if review.completed_at %} &middot; Completed: {{ review.completed_at[:10] }}{% endif %}
+    </div>
+  </div>
+  {% if review.status == 'in_review' %}
+    <a href="/admin" style="font-size: 13px; font-weight: 600;">View Dashboard &rarr;</a>
+  {% endif %}
+</div>
+{% endfor %}
+
+{% if not reviews %}
+<div class="card" style="padding: 32px; text-align: center; color: #5A6B7B;">
+  No reviews yet. Upload a Corpay spreadsheet above to start your first monthly review.
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+function showMsg(id, msg, isError) {
+  const el = document.getElementById(id);
+  el.textContent = msg;
+  el.className = isError ? 'section-banner banner-warn' : 'section-banner banner-info';
+  el.style.display = 'block';
+}
+
+function processReview() {
+  const fileInput = document.getElementById('corpay-file');
+  const period = document.getElementById('review-period').value;
+  const label = document.getElementById('review-label').value;
+  const deadline = document.getElementById('review-deadline').value;
+
+  if (!fileInput.files[0]) { showMsg('upload-error', 'Please select a Corpay spreadsheet.', true); return; }
+  if (!period) { showMsg('upload-error', 'Please select a period.', true); return; }
+
+  const btn = document.getElementById('process-btn');
+  btn.disabled = true;
+  btn.textContent = 'Processing...';
+  document.getElementById('process-status').textContent = 'Uploading and running anomaly detection...';
+
+  const formData = new FormData();
+  formData.append('file', fileInput.files[0]);
+  formData.append('period', period);
+  formData.append('label', label);
+  formData.append('deadline', deadline);
+
+  fetch('/api/reviews/create', { method: 'POST', body: formData })
+    .then(r => r.json())
+    .then(resp => {
+      if (resp.status === 'ok') {
+        showMsg('upload-success', 'Review processed successfully! Reloading...', false);
+        setTimeout(() => location.reload(), 1500);
+      } else {
+        showMsg('upload-error', resp.message || 'Processing failed.', true);
+        btn.disabled = false;
+        btn.textContent = 'Upload & Process';
+        document.getElementById('process-status').textContent = '';
+      }
+    })
+    .catch(err => {
+      showMsg('upload-error', 'Request failed: ' + err.message, true);
+      btn.disabled = false;
+      btn.textContent = 'Upload & Process';
+      document.getElementById('process-status').textContent = '';
+    });
+}
+
+function sendNotifications(period) {
+  const status = document.getElementById('notify-status');
+  status.textContent = 'Sending notifications...';
+  status.style.color = '#5A6B7B';
+
+  fetch('/api/reviews/' + period + '/notify', { method: 'POST' })
+    .then(r => r.json())
+    .then(resp => {
+      if (resp.status === 'ok') {
+        status.textContent = 'Notifications sent to ' + resp.sent + ' managers.';
+        status.style.color = '#2E7D32';
+      } else if (resp.status === 'partial') {
+        status.textContent = 'Sent to ' + resp.sent + ' managers. Errors: ' + resp.errors.join(', ');
+        status.style.color = '#E65100';
+      } else {
+        status.textContent = resp.message || 'Failed to send.';
+        status.style.color = '#C62828';
+      }
+    });
+}
+
+function sendReminders(period) {
+  const status = document.getElementById('notify-status');
+  status.textContent = 'Sending reminders...';
+
+  fetch('/api/reviews/' + period + '/remind', { method: 'POST' })
+    .then(r => r.json())
+    .then(resp => {
+      if (resp.status === 'ok') {
+        status.textContent = 'Reminders sent to ' + resp.sent + ' managers (' + resp.pending_groups.length + ' groups pending).';
+        status.style.color = '#E65100';
+      } else {
+        status.textContent = resp.message || 'Failed.';
+        status.style.color = '#C62828';
+      }
+    });
+}
+</script>
+{% endblock %}

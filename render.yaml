@@ -13,6 +13,12 @@ services:
         sync: false
       - key: ADMIN_DEFAULT_PASSWORD
         sync: false
+      - key: ADMIN_DEFAULT_EMAIL
+        sync: false
+      - key: SENDGRID_API_KEY
+        sync: false
+      - key: FROM_EMAIL
+        sync: false
       - key: PYTHON_VERSION
         value: 3.11.0
     disk:

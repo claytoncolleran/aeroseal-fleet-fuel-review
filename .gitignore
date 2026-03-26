@@ -7,3 +7,4 @@ credentials.json
 token.json
 review_decisions.json
 users.json
+data/reviews/

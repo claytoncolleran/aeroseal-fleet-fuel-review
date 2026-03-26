@@ -339,7 +339,8 @@
       <nav class="header-nav">
         <a href="/" class="{% if request.path == '/' %}active{% endif %}">Dashboard</a>
         {% if current_user and current_user.role == 'admin' %}
-        <a href="/admin" class="{% if '/admin' in request.path and '/users' not in request.path %}active{% endif %}">Admin</a>
+        <a href="/admin" class="{% if request.path == '/admin' %}active{% endif %}">Admin</a>
+        <a href="/admin/reviews" class="{% if '/reviews' in request.path %}active{% endif %}">Reviews</a>
         <a href="/admin/users" class="{% if '/users' in request.path %}active{% endif %}">Users</a>
         {% endif %}
         {% if current_user %}
