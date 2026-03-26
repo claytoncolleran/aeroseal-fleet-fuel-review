@@ -646,10 +646,10 @@ def send_notifications(period):
     users = load_users()
     managers = {email: u for email, u in users.items() if u.get("role") == "manager"}
 
-    sendgrid_key = os.environ.get("SENDGRID_API_KEY")
+    sendgrid_key = os.environ.get("RESEND_API_KEY")
     if not sendgrid_key:
         return jsonify({"status": "error",
-                        "message": "SENDGRID_API_KEY not configured. Set it in Render environment variables."}), 500
+                        "message": "RESEND_API_KEY not configured. Set it in Render environment variables."}), 500
 
     from_email = os.environ.get("FROM_EMAIL", "fleet@aeroseal.com")
     app_url = request.host_url.rstrip("/")
@@ -700,9 +700,9 @@ def send_reminders(period):
         if not decisions.get(g, {}).get("_submission"):
             pending_groups.add(g)
 
-    sendgrid_key = os.environ.get("SENDGRID_API_KEY")
+    sendgrid_key = os.environ.get("RESEND_API_KEY")
     if not sendgrid_key:
-        return jsonify({"status": "error", "message": "SENDGRID_API_KEY not configured."}), 500
+        return jsonify({"status": "error", "message": "RESEND_API_KEY not configured."}), 500
 
     from_email = os.environ.get("FROM_EMAIL", "fleet@aeroseal.com")
     app_url = request.host_url.rstrip("/")
@@ -734,20 +734,20 @@ def send_reminders(period):
 # EMAIL HELPERS
 # ═══════════════════════════════════════════════════════════════════════════════
 
-def _send_email(sendgrid_key, from_email, to_email, subject, html):
-    """Send an email via SendGrid HTTP API (no SDK dependency)."""
+def _send_email(api_key, from_email, to_email, subject, html):
+    """Send an email via Resend HTTP API (no SDK dependency)."""
     import urllib.request
     payload = json.dumps({
-        "personalizations": [{"to": [{"email": to_email}]}],
-        "from": {"email": from_email, "name": "Aeroseal Fleet Review"},
+        "from": f"Aeroseal Fleet Review <{from_email}>",
+        "to": [to_email],
         "subject": subject,
-        "content": [{"type": "text/html", "value": html}],
+        "html": html,
     }).encode()
     req = urllib.request.Request(
-        "https://api.sendgrid.com/v3/mail/send",
+        "https://api.resend.com/emails",
         data=payload,
         headers={
-            "Authorization": f"Bearer {sendgrid_key}",
+            "Authorization": f"Bearer {api_key}",
             "Content-Type": "application/json",
         },
         method="POST",
