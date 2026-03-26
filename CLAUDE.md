@@ -1,85 +1,119 @@
 # Aeroseal Fleet Fuel Review
 
 ## Project Overview
-Fuel analytics and fleet manager approval workflow for Aeroseal's fleet. Ingests monthly Corpay fuel card exports, cross-references against Fleetio vehicle/fleet group data, flags anomalies, and routes approvals: Fleet Manager → Fleet Administrator → Accounting.
+Fuel analytics and fleet manager approval workflow for Aeroseal's fleet. Ingests monthly Corpay fuel card exports, cross-references against Fleetio vehicle/fleet group data, flags anomalies, and routes approvals through a multi-tier workflow: Fleet Manager → Fleet Administrator → Accounting.
 
 **Repo:** https://github.com/claytoncolleran/aeroseal-fleet-fuel-review
+**Live site:** https://aeroseal-fleet-fuel-review.onrender.com
 **Working directory:** `~/dev/projects/aeroseal/Fuel-Review/`
+**Hosting:** Render.com (Starter plan, persistent disk at `/var/data`)
 
 ## Architecture (WAT Framework)
-- **Workflows:** `workflows/` — Markdown SOPs
 - **Tools:** `tools/` — Python scripts for deterministic execution
-- **Data:** `data/` — persistent project data
-- **Web App:** `app.py` — Flask server on port 5001
+- **Data:** `data/` — MPG baselines, reference Corpay file (monthly data lives on persistent disk)
+- **Web App:** `app.py` — Flask server with auth, review management, email notifications
 - **Templates:** `templates/` — Jinja2 HTML with Aeroseal branding
+- **Workflows:** `workflows/` — Markdown SOPs
 
 ## Key Files
 | File | Purpose |
 |---|---|
-| `tools/anomaly_detection.py` | Core engine — loads Corpay data, matches to Fleetio, runs 6 anomaly flags, outputs `anomaly_report.json` |
-| `data/mpg_baselines.json` | MPG baselines for all 101 fleet vehicles (EPA + manufacturer estimates) |
-| `data/Corpay_Transactions.xlsx` | Monthly Corpay fuel card export (source data — never overwrite) |
-| `data/anomaly_report.json` | Generated report consumed by the web app |
-| `data/review_decisions.json` | Fleet manager approve/deny decisions (gitignored) |
-| `app.py` | Flask app — dashboard, manager views, admin drill-down, accounting report |
-| `.env` | Fleetio API credentials (gitignored) |
+| `app.py` | Flask app — auth, dashboard, manager views, admin panel, review management, report generation, email notifications |
+| `tools/anomaly_detection.py` | Core engine — loads Corpay data, matches to Fleetio, runs 6 anomaly flags. Accepts custom input/output paths for monthly reviews. |
+| `data/mpg_baselines.json` | MPG baselines for 101 fleet vehicles (EPA + manufacturer estimates) |
+| `data/Corpay_Transactions.xlsx` | Reference copy of initial Corpay export (monthly uploads go to persistent disk) |
+| `Procfile` | Render start command: `gunicorn app:app` |
+| `render.yaml` | Render service config — Python runtime, env vars, persistent disk |
 
-## Credentials
-- `.env` contains `FLEETIO_API_KEY` and `FLEETIO_ACCOUNT_TOKEN` — never commit
-- Fleetio API base: `https://secure.fleetio.com/api/v1`
-- Auth headers: `Authorization: Token {key}` + `Account-Token: {token}`
+## Authentication
+- **Email-based login** — users log in with email + password
+- **Two roles:** `admin` (full access + user management) and `manager` (sees only assigned fleet group)
+- **Password hashing:** pbkdf2:sha256 via werkzeug
+- **Session-based** — Flask session cookies
+- **User data** stored in `users.json` on persistent disk (gitignored)
+- **Default admin** auto-created on first run from `ADMIN_DEFAULT_EMAIL` + `ADMIN_DEFAULT_PASSWORD` env vars
+- **User management:** admins create/edit/delete users at `/admin/users`
 
-## Data Flow
-1. `Corpay_Transactions.xlsx` → loaded by `anomaly_detection.py`
-2. Fleetio API → vehicles + fleet groups pulled live
-3. Matching: Corpay `Cardholder Last Name` suffix (zero-padded) → Fleetio vehicle name suffix
-4. Card type split: `Cardholder First Name` = `VEHICLE` (vehicle analysis) | `UNIT`/`EQUIPMENT` (equipment, excluded) | `TEMPORARY` (separate section)
-5. Anomaly detection → `anomaly_report.json`
-6. Flask app reads report + decisions → serves UI
+## Monthly Review Workflow
+1. **Admin** goes to `/admin/reviews` → uploads Corpay spreadsheet, sets period, label, and deadline
+2. **Processing** runs anomaly detection in-app, creates `reviews/<period>/` directory with report + decisions
+3. **Admin** clicks "Send Notifications" → emails all fleet managers via Resend with a link to their review
+4. **Fleet managers** log in, review flagged transactions, approve/deny each flag, submit
+5. **Admin** monitors progress, sends reminders to managers who haven't submitted
+6. **Admin** generates consolidated accounting report at `/admin/report`, approves + signs
+7. **Review marked complete** — archived and accessible as read-only history
+
+### Review Data Structure (persistent disk)
+```
+/var/data/                      (Render) or data/ (local dev)
+  users.json                    Email-keyed user accounts
+  reviews/
+    2026-03/
+      corpay_upload.xlsx         Original upload
+      anomaly_report.json        Generated report
+      review_decisions.json      Manager decisions
+      meta.json                  Period, label, deadline, status, timestamps
+```
+
+## Email Notifications
+- **Provider:** Resend (resend.com) — HTTP API, no SDK dependency
+- **Sending domain:** `aeroseal.app` (verified in Resend)
+- **From address:** `noreply@aeroseal.app`
+- **Note:** Aeroseal.com (Microsoft 365) may quarantine emails from aeroseal.app — domain needs to be whitelisted as safe sender in M365 admin
+- **Notification types:** initial review ready + reminders for pending managers
+
+## Credentials & Environment Variables
+**Local (.env, gitignored):**
+- `FLEETIO_API_KEY`, `FLEETIO_ACCOUNT_TOKEN`
+
+**Render environment variables:**
+| Key | Purpose |
+|---|---|
+| `FLEETIO_API_KEY` | Fleetio API auth |
+| `FLEETIO_ACCOUNT_TOKEN` | Fleetio account identifier |
+| `SECRET_KEY` | Flask session encryption |
+| `ADMIN_DEFAULT_EMAIL` | Default admin account email (e.g., `clayton.colleran@aeroseal.com`) |
+| `ADMIN_DEFAULT_PASSWORD` | Default admin password (change after first login) |
+| `RESEND_API_KEY` | Resend email API key (starts with `re_`) |
+| `FROM_EMAIL` | Sending address (e.g., `noreply@aeroseal.app`) |
 
 ## Anomaly Flags
 | Flag | Level | Logic |
 |---|---|---|
-| F1 — Fuel Efficiency | **Vehicle-level** | Period MPG = (Last Odo - First Odo) / Sum(Gallons from fill 2+). Flag if >20% below baseline. NOT per-transaction — partial fills make per-fill MPG unreliable. |
+| F1 — Fuel Efficiency | **Vehicle-level** | Period MPG = (Last Odo - First Odo) / Sum(Gallons from fill 2+). Flag if >20% below baseline. NOT per-transaction. |
 | F2 — Cost Per Gallon | Transaction | Flag if >15% above monthly median for that fuel type |
 | F3 — Odometer Issue | Transaction | Missing or decreasing odometer readings |
-| F4 — Small Fill | Transaction | Fill < 25% of vehicle's average fill size |
+| F4 — Small Fill | Transaction | Fill < 25% of vehicle's average. Skips Corpay 1.0-gal defaults (no odometer entered). |
 | F5 — High Frequency | Transaction | Driver with >2 fills in any 48-hour window |
-| F6 — Wrong Fuel Type | Transaction | Cross-reference Corpay product vs Fleetio fuel type. Gas vehicles: regular unleaded only (no premium/midgrade). Diesel vehicles: diesel only. |
+| F6 — Wrong Fuel Type | Transaction | Fuel mismatch vs Fleetio record. Gas vehicles: regular unleaded only. |
 
 ## MPG Calculation — Important Design Decision
-Per-fill MPG is **not used** because drivers don't always fill to full or drive to empty. The gallons pumped at fill N ≠ gallons consumed between fills N-1 and N. Instead, we use vehicle-level period MPG over the entire reporting period, which self-corrects for partial fills (error bounded by tank size ~20-25 gal over thousands of miles).
+Per-fill MPG is **not used** because drivers don't always fill to full or drive to empty. The gallons pumped at fill N ≠ gallons consumed between fills. Instead, we use vehicle-level period MPG over the entire reporting period, which self-corrects for partial fills.
 
-Split fills (same odometer within 10 minutes) are combined into single fill events.
-Bad odometer entries (decreasing or producing MPG >40) are filtered from the clean sequence.
+**Corpay 1.0-gallon defaults:** When no odometer is entered at the pump, Corpay defaults gallons to 1.0 with variable pricing. These are excluded from MPG calculations and Flag 4 analysis.
 
-## Approval Workflow
-1. **Fleet Managers** (`/group/<name>`) — review flagged transactions, temp cards, declined txns. Approve/deny each flag with reason. Submit when all reviewed.
-2. **Fleet Admin** (`/admin`) — sees all group submissions, drills into each. Generates consolidated report.
-3. **Accounting Report** (`/admin/report`) — print-friendly page with spend breakdown, denied items, MPG flags, fuel pricing, signature block. Browser print → PDF.
-
-## UI / Branding
-- Aeroseal brand system: Steel Blue `#005A90`, Sapphire `#008CD1`, Sky Blue `#51BDE7`, Citrus Green `#C9DC50`, Midnight Blue `#113C5B`
-- Font: Figtree (Google Fonts)
-- Icons: Lucide-style thin stroke (fuel pump in header)
-- Reference the `aeroseal-brand` skill for any visual changes
-
-## Development Status
-- **Phase 1:** Data loading & validation — COMPLETE
-- **Phase 2:** Anomaly detection — COMPLETE
-- **Phase 3:** Fleet group UI — COMPLETE
-- **Phase 4:** Admin review & report generation — COMPLETE
-- **Phase 5:** Final review & cleanup — NOT STARTED
+## Data Flow
+1. Admin uploads `Corpay_Transactions.xlsx` via `/admin/reviews`
+2. `anomaly_detection.py` runs with custom paths → generates `anomaly_report.json`
+3. Fleetio API provides vehicles + fleet groups (pulled live during processing)
+4. Matching: Corpay `Cardholder Last Name` suffix (zero-padded) → Fleetio vehicle name suffix
+5. Card type split: `VEHICLE` (analysis) | `UNIT`/`EQUIPMENT` (excluded) | `TEMPORARY` (separate section)
+6. Flask app reads report + decisions from the active review's directory
 
 ## Running Locally
 ```bash
 cd ~/dev/projects/aeroseal/Fuel-Review
-python3 tools/anomaly_detection.py  # regenerate anomaly_report.json
-python3 app.py                       # start Flask on port 5001
+python3 app.py                       # start Flask on port 5001 (login: admin@aeroseal.com / changeme)
+# Or run anomaly detection standalone:
+python3 tools/anomaly_detection.py
 ```
 
+## Deployment
+- Render auto-deploys on `git push` to `main`
+- Persistent disk at `/var/data` survives deploys
+- App auto-detects environment: `/var/data` exists → Render; otherwise → local `data/`
+
 ## Sub-Account → Fleet Group Mapping
-Used for temporary and declined cards that don't have a Fleetio vehicle match:
 | Sub Account | Fleet Manager |
 |---|---|
 | AEROSEAL CARTX | Robert Tamayo |
@@ -94,3 +128,12 @@ Used for temporary and declined cards that don't have a Fleetio vehicle match:
 | AEROSEAL MAGTX | Robert Tamayo |
 | AEROSEAL ODETX | Robert Tamayo |
 | AEROSEAL SATX | Robert Tamayo |
+
+## Development Status
+All core phases complete. System is deployed and operational.
+- Phases 1-5: COMPLETE
+- Authentication + user management: COMPLETE
+- Render deployment with persistent disk: COMPLETE
+- Monthly review workflow (upload/process/notify/archive): COMPLETE
+- Email notifications via Resend: COMPLETE
+- Known issue: aeroseal.com (M365) quarantines emails from aeroseal.app — safe sender request submitted
