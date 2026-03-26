@@ -338,7 +338,14 @@
       </div>
       <nav class="header-nav">
         <a href="/" class="{% if request.path == '/' %}active{% endif %}">Dashboard</a>
-        <a href="/admin" class="{% if request.path == '/admin' %}active{% endif %}">Admin</a>
+        {% if current_user and current_user.role == 'admin' %}
+        <a href="/admin" class="{% if '/admin' in request.path and '/users' not in request.path %}active{% endif %}">Admin</a>
+        <a href="/admin/users" class="{% if '/users' in request.path %}active{% endif %}">Users</a>
+        {% endif %}
+        {% if current_user %}
+        <span style="font-size: 13px; color: #5A6B7B; padding: 6px 8px;">{{ current_user.display_name }}</span>
+        <a href="/logout" style="font-size: 13px; color: #999;">Logout</a>
+        {% endif %}
       </nav>
     </div>
   </header>

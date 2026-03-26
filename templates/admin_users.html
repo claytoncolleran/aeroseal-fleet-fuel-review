@@ -1,0 +1,170 @@
+{% extends "base.html" %}
+{% block title %}User Management{% endblock %}
+{% block content %}
+<div class="page-header">
+  <p style="margin-bottom: 4px;"><a href="/admin">&larr; Back to Admin</a></p>
+  <h1>User Management</h1>
+  <p>Create and manage user accounts for fleet managers and administrators</p>
+</div>
+
+<!-- Create User Form -->
+<div class="card" style="padding: 24px; margin-bottom: 24px;">
+  <h2 style="font-size: 16px; font-weight: 700; color: var(--aeroseal-steel-blue); margin-bottom: 16px;">Create New User</h2>
+  <div id="create-error" class="section-banner banner-warn" style="display: none; margin-bottom: 12px;"></div>
+  <div id="create-success" class="section-banner banner-info" style="display: none; margin-bottom: 12px;"></div>
+  <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr auto; gap: 12px; align-items: end;">
+    <div>
+      <label class="form-label" style="display: block; font-size: 12px; font-weight: 600; color: var(--aeroseal-midnight-blue); margin-bottom: 4px;">Username</label>
+      <input type="text" id="new-username" class="form-input" placeholder="jsmith" style="font-size: 14px; padding: 10px 12px; border: 1px solid var(--aeroseal-titanium); border-radius: 6px; width: 100%;">
+    </div>
+    <div>
+      <label class="form-label" style="display: block; font-size: 12px; font-weight: 600; color: var(--aeroseal-midnight-blue); margin-bottom: 4px;">Display Name</label>
+      <input type="text" id="new-display" class="form-input" placeholder="John Smith" style="font-size: 14px; padding: 10px 12px; border: 1px solid var(--aeroseal-titanium); border-radius: 6px; width: 100%;">
+    </div>
+    <div>
+      <label class="form-label" style="display: block; font-size: 12px; font-weight: 600; color: var(--aeroseal-midnight-blue); margin-bottom: 4px;">Role</label>
+      <select id="new-role" style="font-family: var(--font-primary); font-size: 14px; padding: 10px 12px; border: 1px solid var(--aeroseal-titanium); border-radius: 6px; width: 100%; background: #fff;" onchange="toggleGroupSelect()">
+        <option value="manager">Fleet Manager</option>
+        <option value="admin">Administrator</option>
+      </select>
+    </div>
+    <div id="group-select-wrap">
+      <label class="form-label" style="display: block; font-size: 12px; font-weight: 600; color: var(--aeroseal-midnight-blue); margin-bottom: 4px;">Fleet Group</label>
+      <select id="new-group" style="font-family: var(--font-primary); font-size: 14px; padding: 10px 12px; border: 1px solid var(--aeroseal-titanium); border-radius: 6px; width: 100%; background: #fff;">
+        <option value="">Select group...</option>
+        {% for g in fleet_groups %}
+        <option value="{{ g }}">{{ g }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div style="display: flex; gap: 8px; align-items: end;">
+      <div>
+        <label class="form-label" style="display: block; font-size: 12px; font-weight: 600; color: var(--aeroseal-midnight-blue); margin-bottom: 4px;">Password</label>
+        <input type="password" id="new-password" class="form-input" placeholder="Password" style="font-size: 14px; padding: 10px 12px; border: 1px solid var(--aeroseal-titanium); border-radius: 6px; width: 140px;">
+      </div>
+      <button class="btn btn-approve" style="padding: 10px 20px; font-size: 14px; white-space: nowrap;" onclick="createUser()">Create User</button>
+    </div>
+  </div>
+</div>
+
+<!-- Existing Users -->
+<h2 style="font-size: 18px; font-weight: 700; color: var(--aeroseal-steel-blue); margin: 0 0 16px;">
+  Current Users ({{ users|length }})
+</h2>
+
+<div class="card">
+  <table class="txn-table">
+    <thead>
+      <tr>
+        <th>Username</th>
+        <th>Display Name</th>
+        <th>Role</th>
+        <th>Fleet Group</th>
+        <th>Created</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for username, user in users|dictsort %}
+      <tr id="user-row-{{ username }}">
+        <td><strong>{{ username }}</strong></td>
+        <td>{{ user.get('display_name', username) }}</td>
+        <td>
+          {% if user.role == 'admin' %}
+            <span style="background: var(--aeroseal-sapphire); color: #fff; padding: 2px 10px; border-radius: 12px; font-size: 11px; font-weight: 600;">Admin</span>
+          {% else %}
+            <span style="background: #E3F2FD; color: #1565C0; padding: 2px 10px; border-radius: 12px; font-size: 11px; font-weight: 600;">Manager</span>
+          {% endif %}
+        </td>
+        <td>{{ user.get('fleet_group', '—') or '—' }}</td>
+        <td style="font-size: 12px; color: #5A6B7B;">{{ (user.get('created_at', '')[:10]) }}</td>
+        <td>
+          {% if username != current_user.username %}
+            <button class="btn btn-sm" style="font-size: 11px; padding: 4px 12px; background: transparent; color: var(--aeroseal-sapphire); border: 1px solid var(--aeroseal-sapphire); border-radius: 4px; cursor: pointer;" onclick="resetPassword('{{ username }}')">Reset Password</button>
+            <button class="btn btn-sm" style="font-size: 11px; padding: 4px 12px; background: transparent; color: #C62828; border: 1px solid #C62828; border-radius: 4px; cursor: pointer; margin-left: 4px;" onclick="deleteUser('{{ username }}')">Delete</button>
+          {% else %}
+            <span style="font-size: 12px; color: #999;">Current user</span>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function toggleGroupSelect() {
+  const role = document.getElementById('new-role').value;
+  document.getElementById('group-select-wrap').style.display = role === 'manager' ? 'block' : 'none';
+}
+
+function showMsg(id, msg) {
+  const el = document.getElementById(id);
+  el.textContent = msg;
+  el.style.display = 'block';
+  setTimeout(() => el.style.display = 'none', 4000);
+}
+
+function createUser() {
+  const data = {
+    username: document.getElementById('new-username').value.trim(),
+    display_name: document.getElementById('new-display').value.trim(),
+    role: document.getElementById('new-role').value,
+    fleet_group: document.getElementById('new-group').value,
+    password: document.getElementById('new-password').value,
+  };
+
+  if (!data.username || !data.password) {
+    showMsg('create-error', 'Username and password are required.');
+    return;
+  }
+
+  fetch('/api/users', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(data)
+  }).then(r => r.json()).then(resp => {
+    if (resp.status === 'ok') {
+      showMsg('create-success', 'User "' + data.username + '" created successfully.');
+      setTimeout(() => location.reload(), 1000);
+    } else {
+      showMsg('create-error', resp.message || 'Failed to create user.');
+    }
+  }).catch(() => showMsg('create-error', 'Request failed.'));
+}
+
+function resetPassword(username) {
+  const newPw = prompt('Enter new password for ' + username + ':');
+  if (!newPw) return;
+
+  fetch('/api/users/' + username, {
+    method: 'PUT',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({password: newPw})
+  }).then(r => r.json()).then(resp => {
+    if (resp.status === 'ok') {
+      alert('Password updated for ' + username);
+    } else {
+      alert(resp.message || 'Failed to update password.');
+    }
+  });
+}
+
+function deleteUser(username) {
+  if (!confirm('Delete user "' + username + '"? This cannot be undone.')) return;
+
+  fetch('/api/users/' + username, {
+    method: 'DELETE',
+    headers: {'Content-Type': 'application/json'}
+  }).then(r => r.json()).then(resp => {
+    if (resp.status === 'ok') {
+      document.getElementById('user-row-' + username).remove();
+    } else {
+      alert(resp.message || 'Failed to delete user.');
+    }
+  });
+}
+</script>
+{% endblock %}

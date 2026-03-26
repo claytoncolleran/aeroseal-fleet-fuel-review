@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login — Aeroseal Fuel Review</title>
+  <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --aeroseal-steel-blue: #005A90;
+      --aeroseal-sapphire: #008CD1;
+      --aeroseal-midnight-blue: #113C5B;
+      --aeroseal-titanium: #CBD0D4;
+      --aeroseal-citrus-green: #C9DC50;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Figtree', Arial, sans-serif;
+      background: linear-gradient(135deg, #113C5B 0%, #005A90 50%, #008CD1 100%);
+      min-height: 100vh;
+      display: flex; align-items: center; justify-content: center;
+      -webkit-font-smoothing: antialiased;
+    }
+    .login-card {
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 16px 48px rgba(0,0,0,0.2);
+      width: 400px; max-width: 90vw;
+      padding: 40px;
+    }
+    .login-header {
+      text-align: center; margin-bottom: 32px;
+    }
+    .login-header svg { width: 36px; height: 36px; margin-bottom: 12px; }
+    .login-header h1 {
+      font-size: 22px; font-weight: 700;
+      color: var(--aeroseal-steel-blue);
+    }
+    .login-header p {
+      font-size: 14px; color: #5A6B7B; margin-top: 4px;
+    }
+    .form-group { margin-bottom: 20px; }
+    .form-label {
+      display: block; font-size: 13px; font-weight: 600;
+      color: var(--aeroseal-midnight-blue);
+      margin-bottom: 6px;
+    }
+    .form-input {
+      width: 100%; font-family: 'Figtree', Arial, sans-serif;
+      font-size: 15px; padding: 12px 16px;
+      border: 1px solid var(--aeroseal-titanium);
+      border-radius: 6px; color: var(--aeroseal-midnight-blue);
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .form-input:focus {
+      outline: none;
+      border-color: var(--aeroseal-sapphire);
+      box-shadow: 0 0 0 3px rgba(0,140,209,0.15);
+    }
+    .btn-login {
+      width: 100%; padding: 14px;
+      background: var(--aeroseal-sapphire); color: #fff;
+      font-family: 'Figtree', Arial, sans-serif;
+      font-size: 15px; font-weight: 600;
+      border: none; border-radius: 6px;
+      cursor: pointer; transition: background 0.2s, transform 0.2s;
+      letter-spacing: 0.03em;
+    }
+    .btn-login:hover { background: var(--aeroseal-steel-blue); transform: scale(1.01); }
+    .btn-login:active { background: var(--aeroseal-midnight-blue); transform: scale(0.99); }
+    .error-msg {
+      background: #FFEBEE; color: #C62828;
+      padding: 10px 14px; border-radius: 6px;
+      font-size: 13px; font-weight: 500;
+      margin-bottom: 20px; text-align: center;
+      border-left: 3px solid #C62828;
+    }
+  </style>
+</head>
+<body>
+  <div class="login-card">
+    <div class="login-header">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#005A90" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 22V5a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v17"/><path d="M3 22h10"/><path d="M13 10h2a2 2 0 0 1 2 2v4a2 2 0 0 0 2 2 2 2 0 0 0 2-2V9.83a2 2 0 0 0-.59-1.42L18 6"/><path d="M6 12h4"/><path d="M6 8h4"/></svg>
+      <h1>Aeroseal Fuel Review</h1>
+      <p>Sign in to access fleet fuel reports</p>
+    </div>
+
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}
+        {% for msg in messages %}
+          <div class="error-msg">{{ msg }}</div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <form method="POST" action="/login">
+      <div class="form-group">
+        <label class="form-label" for="username">Username</label>
+        <input class="form-input" type="text" id="username" name="username"
+               autocomplete="username" autofocus required>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="password">Password</label>
+        <input class="form-input" type="password" id="password" name="password"
+               autocomplete="current-password" required>
+      </div>
+      <button class="btn-login" type="submit">Sign In</button>
+    </form>
+  </div>
+</body>
+</html>

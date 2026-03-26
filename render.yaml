@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: aeroseal-fuel-review
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app
+    envVars:
+      - key: FLEETIO_API_KEY
+        sync: false
+      - key: FLEETIO_ACCOUNT_TOKEN
+        sync: false
+      - key: SECRET_KEY
+        sync: false
+      - key: ADMIN_DEFAULT_PASSWORD
+        sync: false
+      - key: PYTHON_VERSION
+        value: 3.11.0
+    disk:
+      name: fuel-review-data
+      mountPath: /var/data
+      sizeGB: 1
