@@ -779,6 +779,24 @@ def send_notifications(period):
     return jsonify({"status": "ok", "sent": sent})
 
 
+@app.route("/api/reviews/<period>", methods=["DELETE"])
+@admin_required
+def delete_review(period):
+    """Delete a review and all its associated data."""
+    if USE_DB:
+        review_id = database.db_get_review_id(period)
+        if not review_id:
+            return jsonify({"status": "error", "message": "Review not found."}), 404
+        database.db_delete_review(review_id)
+    else:
+        review_dir = get_review_dir(period)
+        if os.path.isdir(review_dir):
+            import shutil
+            shutil.rmtree(review_dir)
+
+    return jsonify({"status": "ok"})
+
+
 @app.route("/api/reviews/<period>/remind", methods=["POST"])
 @admin_required
 def send_reminders(period):

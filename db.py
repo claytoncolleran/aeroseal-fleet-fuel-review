@@ -321,6 +321,13 @@ def db_update_review(period, **kwargs):
             cur.execute(f"UPDATE reviews SET {', '.join(sets)} WHERE period = %s", vals)
 
 
+def db_delete_review(review_id):
+    """Delete a review and all associated data (cascades via FK constraints)."""
+    with get_db() as conn:
+        cur = conn.cursor()
+        cur.execute("DELETE FROM reviews WHERE id = %s", (review_id,))
+
+
 def db_complete_other_reviews(except_period):
     """Mark all in_review reviews as complete except the given period."""
     with get_db() as conn:

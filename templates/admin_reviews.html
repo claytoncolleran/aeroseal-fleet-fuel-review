@@ -66,6 +66,7 @@
         {% if active.notifications_sent_at %}Resend Notifications{% else %}Send Notifications{% endif %}
       </button>
       <button class="btn btn-deny" style="padding: 8px 20px; font-size: 13px; background: transparent; color: #E65100; border: 1.5px solid #E65100;" onclick="sendReminders('{{ active.period }}')">Send Reminders</button>
+      <button class="btn" style="padding: 8px 20px; font-size: 13px; background: transparent; color: #C62828; border: 1.5px solid #C62828; border-radius: 6px; cursor: pointer;" onclick="deleteReview('{{ active.period }}')">Delete Review</button>
     </div>
   </div>
   {% if active.notifications_sent_at %}
@@ -183,6 +184,21 @@ function sendNotifications(period) {
       } else {
         status.textContent = resp.message || 'Failed to send.';
         status.style.color = '#C62828';
+      }
+    });
+}
+
+function deleteReview(period) {
+  if (!confirm('Delete the review for ' + period + '? This will remove all transactions, flags, and decisions for this period. This cannot be undone.')) return;
+
+  fetch('/api/reviews/' + period, { method: 'DELETE' })
+    .then(r => r.json())
+    .then(resp => {
+      if (resp.status === 'ok') {
+        alert('Review deleted.');
+        location.reload();
+      } else {
+        alert(resp.message || 'Failed to delete.');
       }
     });
 }
