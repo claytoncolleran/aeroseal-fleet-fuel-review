@@ -471,7 +471,7 @@ def check_flag4(gallons, vehicle_avg_fill, vname):
 
 # ─── FLAG 5: High Frequency Fills ───────────────────────────────────────────
 def check_flag5_bulk(vehicle_txns):
-    """Flag drivers with more than 2 fills within any 48-hour window."""
+    """Flag drivers with more than 3 fills within any 24-hour window."""
     driver_txns = defaultdict(list)
     for item in vehicle_txns:
         row = item["row"]
@@ -486,9 +486,9 @@ def check_flag5_bulk(vehicle_txns):
         txns.sort(key=lambda x: x["dt"])
         for i in range(len(txns)):
             window_start = txns[i]["dt"]
-            window_end = window_start + timedelta(hours=48)
+            window_end = window_start + timedelta(hours=24)
             window_txns = [t for t in txns if window_start <= t["dt"] <= window_end]
-            if len(window_txns) > 2:
+            if len(window_txns) > 3:
                 dates = [t["dt"].strftime("%Y-%m-%d %H:%M") for t in window_txns]
                 key = (driver, window_start.strftime("%Y-%m-%d"))
                 if key not in flags:
@@ -496,7 +496,7 @@ def check_flag5_bulk(vehicle_txns):
                         "flag": 5,
                         "flag_name": "High Frequency Fills",
                         "reason": (f"Driver {driver} had {len(window_txns)} fills within "
-                                   f"48 hours on {', '.join(dates[:5])}{'...' if len(dates) > 5 else ''}. "
+                                   f"24 hours on {', '.join(dates[:5])}{'...' if len(dates) > 5 else ''}. "
                                    f"This pattern may warrant review."),
                         "driver": driver,
                         "fill_count": len(window_txns),
