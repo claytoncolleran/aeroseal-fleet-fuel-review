@@ -408,8 +408,9 @@ def submit_group():
     manager_name = data.get("manager_name", "")
     submitted_by = session.get("email", "")
 
+    active = get_active_review()
+
     if USE_DB:
-        active = get_active_review()
         if active:
             review_id = database.db_get_review_id(active["period"])
             if review_id:
@@ -423,6 +424,19 @@ def submit_group():
             "submitted_at": datetime.now().isoformat(), "status": "submitted",
         }
         save_decisions(decisions)
+
+    # Check if all groups have submitted — if so, notify admins
+    if active:
+        try:
+            report = load_report()
+            all_decisions = load_decisions()
+            all_groups = set(report.get("group_summary", {}).keys())
+            submitted_groups = {g for g in all_groups
+                                if all_decisions.get(g, {}).get("_submission")}
+            if all_groups and submitted_groups == all_groups:
+                _notify_admins_all_complete(active)
+        except Exception:
+            pass  # Don't fail the submission if notification fails
 
     return jsonify({"status": "ok"})
 
@@ -903,6 +917,45 @@ def _build_reminder_html(name, meta, review_url):
       </div>
     </div>
     """
+
+
+def _notify_admins_all_complete(meta):
+    """Send email to all admin users that all fleet managers have submitted."""
+    resend_key = os.environ.get("RESEND_API_KEY")
+    if not resend_key:
+        return
+
+    from_email = os.environ.get("FROM_EMAIL", "notifications@aeroseal.com")
+    app_url = os.environ.get("APP_URL", "https://aeroseal-fleet-fuel-review.onrender.com")
+    report_url = f"{app_url}/admin/report"
+    label = meta.get("label", meta.get("period", ""))
+
+    users = load_users()
+    admins = {email: u for email, u in users.items() if u.get("role") == "admin"}
+
+    for email, user in admins.items():
+        try:
+            _send_email(
+                api_key=resend_key,
+                from_email=from_email,
+                to_email=email,
+                subject=f"All Reviews Complete: {label}",
+                html=f"""
+                <div style="font-family: 'Figtree', Arial, sans-serif; max-width: 520px; margin: 0 auto; padding: 32px;">
+                  <div style="text-align: center; margin-bottom: 24px;">
+                    <div style="font-size: 22px; font-weight: 700; color: #005A90;">Aeroseal Fuel Review</div>
+                  </div>
+                  <p>Hi {user.get('display_name', email)},</p>
+                  <p>All fleet managers have completed their reviews for <strong>{label}</strong>.</p>
+                  <p>The consolidated accounting report is ready to generate.</p>
+                  <div style="text-align: center; margin: 28px 0;">
+                    <a href="{report_url}" style="background: #008CD1; color: #fff; padding: 14px 32px; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 15px;">Generate Report</a>
+                  </div>
+                </div>
+                """,
+            )
+        except Exception:
+            pass
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
