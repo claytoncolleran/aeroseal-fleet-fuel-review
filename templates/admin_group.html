@@ -27,7 +27,7 @@
   </div>
   <div class="stat-card warn">
     <div class="stat-number">{{ denials }}</div>
-    <div class="stat-label">Denied</div>
+    <div class="stat-label">Commented</div>
   </div>
   <div class="stat-card">
     <div class="stat-number">{{ flagged_txns|length }}</div>
@@ -59,7 +59,7 @@
 
 {% if denied_items %}
 <h2 style="font-size: 18px; font-weight: 700; color: #C62828; margin: 24px 0 12px;">
-  Denied Items ({{ denied_items|length }})
+  Commented Items ({{ denied_items|length }})
 </h2>
 <div class="card">
   <table class="txn-table">
@@ -70,7 +70,7 @@
         <th>Driver</th>
         <th>Cost</th>
         <th>Flags</th>
-        <th>Denial Reason</th>
+        <th>Comment</th>
       </tr>
     </thead>
     <tbody>
@@ -127,7 +127,7 @@
           {% if t.decision.get('action') == 'approve' %}
             <span class="decision-status decision-approved">Approved</span>
           {% elif t.decision.get('action') == 'deny' %}
-            <span class="decision-status decision-denied">Denied</span>
+            <span class="decision-status decision-denied">Commented</span>
           {% else %}
             <span style="color: #999; font-size: 12px;">Pending</span>
           {% endif %}

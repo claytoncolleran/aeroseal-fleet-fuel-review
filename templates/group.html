@@ -125,13 +125,13 @@
             {% if txn.flag_count > 0 %}
               <div class="decision-row" data-txn-key="{{ txn_key }}">
                 {% if existing.get('action') == 'approve' %}
-                  <span class="decision-status decision-approved">Approved</span>
+                  <span class="decision-status decision-approved">Acknowledged</span>
                 {% elif existing.get('action') == 'deny' %}
-                  <span class="decision-status decision-denied">Denied: {{ existing.get('reason', '') }}</span>
+                  <span class="decision-status decision-denied">Comment: {{ existing.get('reason', '') }}</span>
                 {% else %}
-                  <button class="btn btn-approve btn-sm" onclick="submitDecision(this, '{{ txn_key }}', 'approve')">Approve</button>
-                  <button class="btn btn-deny btn-sm" onclick="showDenyReason(this, '{{ txn_key }}')">Deny</button>
-                  <input class="deny-reason" type="text" placeholder="Reason for denial..." data-key="{{ txn_key }}"
+                  <button class="btn btn-approve btn-sm" onclick="submitDecision(this, '{{ txn_key }}', 'approve')">Acknowledge</button>
+                  <button class="btn btn-deny btn-sm" onclick="showDenyReason(this, '{{ txn_key }}')">Comment</button>
+                  <input class="deny-reason" type="text" placeholder="Enter comment..." data-key="{{ txn_key }}"
                          onkeydown="if(event.key==='Enter')submitDeny(this,'{{ txn_key }}')">
                 {% endif %}
               </div>
@@ -186,13 +186,13 @@
         <td>
           <div class="decision-row" data-txn-key="{{ txn_key }}">
             {% if existing.get('action') == 'approve' %}
-              <span class="decision-status decision-approved">Approved</span>
+              <span class="decision-status decision-approved">Acknowledged</span>
             {% elif existing.get('action') == 'deny' %}
-              <span class="decision-status decision-denied">Denied: {{ existing.get('reason', '') }}</span>
+              <span class="decision-status decision-denied">Comment: {{ existing.get('reason', '') }}</span>
             {% else %}
-              <button class="btn btn-approve btn-sm" onclick="submitDecision(this, '{{ txn_key }}', 'approve')">Approve</button>
-              <button class="btn btn-deny btn-sm" onclick="showDenyReason(this, '{{ txn_key }}')">Deny</button>
-              <input class="deny-reason" type="text" placeholder="Reason..." data-key="{{ txn_key }}"
+              <button class="btn btn-approve btn-sm" onclick="submitDecision(this, '{{ txn_key }}', 'approve')">Acknowledge</button>
+              <button class="btn btn-deny btn-sm" onclick="showDenyReason(this, '{{ txn_key }}')">Comment</button>
+              <input class="deny-reason" type="text" placeholder="Enter comment..." data-key="{{ txn_key }}"
                      onkeydown="if(event.key==='Enter')submitDeny(this,'{{ txn_key }}')">
             {% endif %}
           </div>
@@ -240,10 +240,15 @@
         <td><span style="font-size: 11px; text-transform: uppercase; color: #C62828; font-weight: 600;">{{ txn.card_type }}</span></td>
         <td>
           <div class="decision-row" data-txn-key="{{ txn_key }}">
-            {% if existing.get('action') %}
+            {% if existing.get('action') == 'approve' %}
               <span class="decision-status decision-approved">Acknowledged</span>
+            {% elif existing.get('action') == 'deny' %}
+              <span class="decision-status decision-denied">Comment: {{ existing.get('reason', '') }}</span>
             {% else %}
               <button class="btn btn-approve btn-sm" onclick="submitDecision(this, '{{ txn_key }}', 'approve')">Acknowledge</button>
+              <button class="btn btn-deny btn-sm" onclick="showDenyReason(this, '{{ txn_key }}')">Comment</button>
+              <input class="deny-reason" type="text" placeholder="Enter comment..." data-key="{{ txn_key }}"
+                     onkeydown="if(event.key==='Enter')submitDeny(this,'{{ txn_key }}')">
             {% endif %}
           </div>
         </td>
@@ -308,9 +313,9 @@ function submitDecision(btn, txnKey, action, reason='') {
   }).then(r => r.json()).then(data => {
     const row = btn.closest('.decision-row');
     if (action === 'approve') {
-      row.innerHTML = '<span class="decision-status decision-approved">Approved</span>';
+      row.innerHTML = '<span class="decision-status decision-approved">Acknowledged</span>';
     } else {
-      row.innerHTML = '<span class="decision-status decision-denied">Denied: ' + reason + '</span>';
+      row.innerHTML = '<span class="decision-status decision-denied">Comment: ' + reason + '</span>';
     }
     reviewed++;
     updateProgress();

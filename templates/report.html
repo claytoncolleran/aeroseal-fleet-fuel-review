@@ -185,7 +185,7 @@
     </div>
     <div class="summary-box warn">
       <div class="summary-value">{{ total_denied }}</div>
-      <div class="summary-label">Flags Denied</div>
+      <div class="summary-label">With Comments</div>
     </div>
   </div>
 
@@ -198,7 +198,7 @@
         <th>Transactions</th>
         <th>Flagged</th>
         <th>Approved</th>
-        <th>Denied</th>
+        <th>Commented</th>
         <th style="text-align: right;">Total Spend</th>
         <th>Manager</th>
         <th>Submitted</th>
@@ -237,7 +237,7 @@
     {% endfor %}
   {% endfor %}
 
-  <h2>Denied Transactions — Full Detail</h2>
+  <h2>Commented Transactions — Full Detail</h2>
   {% set has_denials = false %}
   {% for g in group_data %}
     {% if g.denied_items %}
@@ -245,7 +245,7 @@
       <h3>{{ g.name }}</h3>
       <table>
         <thead>
-          <tr><th>Date</th><th>Vehicle</th><th>Driver</th><th>Cost</th><th>Flags</th><th>Denial Reason</th></tr>
+          <tr><th>Date</th><th>Vehicle</th><th>Driver</th><th>Cost</th><th>Flags</th><th>Comment</th></tr>
         </thead>
         <tbody>
           {% for t in g.denied_items %}
@@ -267,7 +267,7 @@
     {% endif %}
   {% endfor %}
   {% if not has_denials %}
-    <p style="color: #5A6B7B; padding: 12px 0;">No transactions were denied during this review period.</p>
+    <p style="color: #5A6B7B; padding: 12px 0;">No transactions had comments during this review period.</p>
   {% endif %}
 
   <!-- Fuel Type Pricing -->
