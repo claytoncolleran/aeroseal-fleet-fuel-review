@@ -23,7 +23,7 @@
   </div>
   <div class="stat-card accent">
     <div class="stat-number">{{ approvals }}</div>
-    <div class="stat-label">Approved</div>
+    <div class="stat-label">Acknowledged</div>
   </div>
   <div class="stat-card warn">
     <div class="stat-number">{{ denials }}</div>
@@ -125,7 +125,7 @@
         </td>
         <td>
           {% if t.decision.get('action') == 'approve' %}
-            <span class="decision-status decision-approved">Approved</span>
+            <span class="decision-status decision-approved">Acknowledged</span>
           {% elif t.decision.get('action') == 'deny' %}
             <span class="decision-status decision-denied">Commented</span>
           {% else %}

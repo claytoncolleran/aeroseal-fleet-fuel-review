@@ -150,7 +150,7 @@
     </div>
     <div style="display: flex; gap: 10px; align-items: center;">
       <input type="text" id="admin-name" class="admin-input" placeholder="Fleet Admin Name">
-      <button class="btn btn-primary" onclick="adminApprove()">Approve &amp; Sign</button>
+      <button class="btn btn-primary" onclick="adminApprove()">Acknowledge &amp; Sign</button>
       <button class="btn btn-outline" onclick="window.print()">Download PDF</button>
     </div>
   </div>
@@ -181,7 +181,7 @@
     </div>
     <div class="summary-box accent">
       <div class="summary-value">{{ total_approved }}</div>
-      <div class="summary-label">Flags Approved</div>
+      <div class="summary-label">Flags Acknowledged</div>
     </div>
     <div class="summary-box warn">
       <div class="summary-value">{{ total_denied }}</div>
@@ -197,7 +197,7 @@
         <th>Fleet Group</th>
         <th>Transactions</th>
         <th>Flagged</th>
-        <th>Approved</th>
+        <th>Acknowledged</th>
         <th>Commented</th>
         <th style="text-align: right;">Total Spend</th>
         <th>Manager</th>
@@ -320,7 +320,7 @@ function adminApprove() {
     document.getElementById('sig-date').textContent = new Date().toLocaleDateString();
     document.getElementById('admin-name').disabled = true;
     const btn = event.target;
-    btn.textContent = 'Approved';
+    btn.textContent = 'Acknowledged';
     btn.style.background = '#2E7D32';
     btn.disabled = true;
   });

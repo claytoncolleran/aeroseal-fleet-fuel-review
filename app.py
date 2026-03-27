@@ -761,7 +761,7 @@ def send_notifications(period):
         review_url = f"{app_url}/group/{group}"
         try:
             _send_email(
-                sendgrid_key=sendgrid_key,
+                api_key=sendgrid_key,
                 from_email=from_email,
                 to_email=email,
                 subject=f"Fuel Review Ready: {meta.get('label', period)}",
@@ -838,7 +838,7 @@ def send_reminders(period):
         review_url = f"{app_url}/group/{group}"
         try:
             _send_email(
-                sendgrid_key=sendgrid_key,
+                api_key=sendgrid_key,
                 from_email=from_email,
                 to_email=email,
                 subject=f"Reminder: Fuel Review Due — {meta.get('label', period)}",
