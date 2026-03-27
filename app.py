@@ -85,16 +85,12 @@ def get_active_review():
 
 def load_report(period=None):
     """Load anomaly_report.json for a period (defaults to active review)."""
+    empty_report = {"transactions": [], "temporary_cards": [], "declined_transactions": [],
+                     "group_summary": {}, "summary": {}, "mpg_summary_by_vehicle": {}}
     if not period:
         active = get_active_review()
         if not active:
-            # Fall back to legacy data/ directory
-            legacy = os.path.join(DATA_DIR, "anomaly_report.json")
-            if os.path.exists(legacy):
-                with open(legacy) as f:
-                    return json.load(f)
-            return {"transactions": [], "temporary_cards": [], "declined_transactions": [],
-                    "group_summary": {}, "summary": {}, "mpg_summary_by_vehicle": {}}
+            return empty_report
         period = active["period"]
 
     report_path = os.path.join(get_review_dir(period), "anomaly_report.json")
@@ -122,10 +118,6 @@ def load_decisions(period=None):
     if not period:
         active = get_active_review()
         if not active:
-            legacy = os.path.join(PERSIST_DIR, "review_decisions.json")
-            if os.path.exists(legacy):
-                with open(legacy) as f:
-                    return json.load(f)
             return {}
         period = active["period"]
 
