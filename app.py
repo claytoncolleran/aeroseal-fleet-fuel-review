@@ -13,6 +13,7 @@ import json
 import os
 import sys
 from datetime import datetime
+import secrets
 import db as database
 
 app = Flask(__name__)
@@ -219,8 +220,6 @@ def login_required(f):
     def decorated(*args, **kwargs):
         if "email" not in session:
             return redirect(url_for("login"))
-        if session.get("must_change_password"):
-            return redirect(url_for("change_password"))
         return f(*args, **kwargs)
     return decorated
 
@@ -276,15 +275,12 @@ def login():
             users = load_users()
             user = users.get(email)
 
-        if user and check_password_hash(user["password_hash"], password):
+        if user and user.get("password_hash") and check_password_hash(user["password_hash"], password):
             session["email"] = email
             session["role"] = user["role"]
             session["display_name"] = user.get("display_name", email)
             session["fleet_group"] = user.get("fleet_group")
-            session["must_change_password"] = user.get("must_change_password", False)
             session.permanent = True
-            if session["must_change_password"]:
-                return redirect(url_for("change_password"))
             return redirect(url_for("index"))
         else:
             flash("Invalid email or password.", "error")
@@ -298,10 +294,20 @@ def logout():
     return redirect(url_for("login"))
 
 
-@app.route("/change-password", methods=["GET", "POST"])
-def change_password():
-    """Force password change on first login."""
-    if "email" not in session:
+@app.route("/setup-account/<token>", methods=["GET", "POST"])
+def setup_account(token):
+    """Set password via invite or reset link."""
+    if not USE_DB:
+        flash("Account setup requires database.", "error")
+        return redirect(url_for("login"))
+
+    user = database.db_get_user_by_token(token)
+    if not user:
+        flash("This link is invalid or has already been used.", "error")
+        return redirect(url_for("login"))
+
+    if user["invite_expires"] and user["invite_expires"] < datetime.now():
+        flash("This link has expired. Please ask your administrator to send a new invite.", "error")
         return redirect(url_for("login"))
 
     if request.method == "POST":
@@ -310,29 +316,24 @@ def change_password():
 
         if not new_password or len(new_password) < 6:
             flash("Password must be at least 6 characters.", "error")
-            return render_template("change_password.html")
+            return render_template("setup_account.html", user=user, token=token)
 
         if new_password != confirm_password:
             flash("Passwords do not match.", "error")
-            return render_template("change_password.html")
+            return render_template("setup_account.html", user=user, token=token)
 
-        email = session["email"]
         pw_hash = generate_password_hash(new_password, method="pbkdf2:sha256")
+        database.db_set_password_and_clear_token(user["email"], pw_hash)
 
-        if USE_DB:
-            database.db_update_user(email, password_hash=pw_hash, must_change_password=False)
-        else:
-            users = load_users()
-            if email in users:
-                users[email]["password_hash"] = pw_hash
-                users[email]["must_change_password"] = False
-                save_users(users)
-
-        session["must_change_password"] = False
-        flash("Password updated successfully.", "success")
+        # Log them in
+        session["email"] = user["email"]
+        session["role"] = user["role"]
+        session["display_name"] = user.get("display_name", user["email"])
+        session["fleet_group"] = user.get("fleet_group")
+        session.permanent = True
         return redirect(url_for("index"))
 
-    return render_template("change_password.html")
+    return render_template("setup_account.html", user=user, token=token)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -980,6 +981,22 @@ def _build_reminder_html(name, meta, review_url):
     """
 
 
+def _build_invite_html(name, setup_url):
+    return f"""
+    <div style="font-family: 'Figtree', Arial, sans-serif; max-width: 520px; margin: 0 auto; padding: 32px;">
+      <div style="text-align: center; margin-bottom: 24px;">
+        <div style="font-size: 22px; font-weight: 700; color: #005A90;">Aeroseal Fuel Review</div>
+      </div>
+      <p>Hi {name},</p>
+      <p>You've been invited to the Aeroseal Fleet Fuel Review system. Click the button below to set your password and get started.</p>
+      <div style="text-align: center; margin: 28px 0;">
+        <a href="{setup_url}" style="background: #008CD1; color: #fff; padding: 14px 32px; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 15px;">Set Up Your Account</a>
+      </div>
+      <p style="color: #5A6B7B; font-size: 13px;">This link expires in 48 hours. If it expires, ask your administrator to resend the invite.</p>
+    </div>
+    """
+
+
 def _notify_admins_all_complete(meta, app_url=None):
     """Send email to all admin users that all fleet managers have submitted."""
     resend_key = os.environ.get("RESEND_API_KEY")
@@ -1110,38 +1127,86 @@ def admin_users():
     return render_template("admin_users.html", users=users, fleet_groups=fleet_groups)
 
 
-@app.route("/api/users", methods=["POST"])
+@app.route("/api/users/invite", methods=["POST"])
 @admin_required
-def create_user():
+def invite_user():
+    """Create user with no password and send invite email."""
     data = request.json
-    email = data.get("username", "").strip().lower()
-    password = data.get("password", "")
+    email = data.get("email", "").strip().lower()
     role = data.get("role", "manager")
     display_name = data.get("display_name", "")
     fleet_group = data.get("fleet_group") or None
 
-    if not email or not password:
-        return jsonify({"status": "error", "message": "Email and password required."}), 400
+    if not email:
+        return jsonify({"status": "error", "message": "Email is required."}), 400
 
     if USE_DB:
         if database.db_user_exists(email):
             return jsonify({"status": "error", "message": "Email already exists."}), 400
-        pw_hash = generate_password_hash(password, method="pbkdf2:sha256")
-        database.db_create_user(email, pw_hash, display_name or email, role,
-                                fleet_group if role == "manager" else None,
-                                session.get("email", ""))
+
+        token = secrets.token_urlsafe(32)
+        database.db_create_invited_user(
+            email, display_name or email, role,
+            fleet_group if role == "manager" else None,
+            token, session.get("email", "")
+        )
     else:
-        users = load_users()
-        if email in users:
-            return jsonify({"status": "error", "message": "Email already exists."}), 400
-        users[email] = {
-            "password_hash": generate_password_hash(password, method="pbkdf2:sha256"),
-            "role": role, "display_name": display_name or email,
-            "fleet_group": fleet_group if role == "manager" else None,
-            "created_at": datetime.now().isoformat(),
-            "created_by": session.get("email", ""),
-        }
-        save_users(users)
+        return jsonify({"status": "error", "message": "Invite requires database."}), 500
+
+    # Send invite email
+    resend_key = os.environ.get("RESEND_API_KEY")
+    if resend_key:
+        from_email = os.environ.get("FROM_EMAIL", "notifications@aeroseal.com")
+        app_url = request.host_url.rstrip("/")
+        setup_url = f"{app_url}/setup-account/{token}"
+        try:
+            _send_email(
+                api_key=resend_key,
+                from_email=from_email,
+                to_email=email,
+                subject="You're Invited to Aeroseal Fuel Review",
+                html=_build_invite_html(display_name or email, setup_url),
+            )
+        except Exception as e:
+            return jsonify({"status": "ok", "warning": f"User created but email failed: {str(e)}"})
+
+    return jsonify({"status": "ok"})
+
+
+@app.route("/api/users/<path:username>/resend-invite", methods=["POST"])
+@admin_required
+def resend_invite(username):
+    """Resend invite or send password reset link."""
+    if not USE_DB:
+        return jsonify({"status": "error", "message": "Requires database."}), 500
+
+    if not database.db_user_exists(username):
+        return jsonify({"status": "error", "message": "User not found."}), 404
+
+    token = secrets.token_urlsafe(32)
+    database.db_set_invite_token(username, token)
+
+    resend_key = os.environ.get("RESEND_API_KEY")
+    if not resend_key:
+        return jsonify({"status": "error", "message": "RESEND_API_KEY not configured."}), 500
+
+    from_email = os.environ.get("FROM_EMAIL", "notifications@aeroseal.com")
+    app_url = request.host_url.rstrip("/")
+    setup_url = f"{app_url}/setup-account/{token}"
+
+    user = database.db_get_user(username)
+    display_name = user.get("display_name", username) if user else username
+
+    try:
+        _send_email(
+            api_key=resend_key,
+            from_email=from_email,
+            to_email=username,
+            subject="Set Your Password - Aeroseal Fuel Review",
+            html=_build_invite_html(display_name, setup_url),
+        )
+    except Exception as e:
+        return jsonify({"status": "error", "message": f"Email failed: {str(e)}"}), 500
 
     return jsonify({"status": "ok"})
 
@@ -1161,9 +1226,6 @@ def update_user(username):
             kwargs["role"] = data["role"]
         if data.get("fleet_group") is not None:
             kwargs["fleet_group"] = data["fleet_group"]
-        if data.get("password"):
-            kwargs["password_hash"] = generate_password_hash(data["password"], method="pbkdf2:sha256")
-            kwargs["must_change_password"] = True
         database.db_update_user(username, **kwargs)
     else:
         users = load_users()
@@ -1176,9 +1238,6 @@ def update_user(username):
             user["role"] = data["role"]
         if data.get("fleet_group") is not None:
             user["fleet_group"] = data["fleet_group"] if user["role"] == "manager" else None
-        if data.get("password"):
-            user["password_hash"] = generate_password_hash(data["password"], method="pbkdf2:sha256")
-            user["must_change_password"] = True
         user["updated_at"] = datetime.now().isoformat()
         user["updated_by"] = session.get("email", "")
         save_users(users)

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Change Password — Aeroseal Fuel Review</title>
+  <title>Set Up Your Account — Aeroseal Fuel Review</title>
   <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
   <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
@@ -12,7 +12,6 @@
       --aeroseal-sapphire: #008CD1;
       --aeroseal-midnight-blue: #113C5B;
       --aeroseal-titanium: #CBD0D4;
-      --aeroseal-citrus-green: #C9DC50;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -32,7 +31,6 @@
     .login-header {
       text-align: center; margin-bottom: 32px;
     }
-    .login-header svg { width: 36px; height: 36px; margin-bottom: 12px; }
     .login-header h1 {
       font-size: 22px; font-weight: 700;
       color: var(--aeroseal-steel-blue);
@@ -65,23 +63,14 @@
       font-size: 15px; font-weight: 600;
       border: none; border-radius: 6px;
       cursor: pointer; transition: background 0.2s, transform 0.2s;
-      letter-spacing: 0.03em;
     }
     .btn-login:hover { background: var(--aeroseal-steel-blue); transform: scale(1.01); }
-    .btn-login:active { background: var(--aeroseal-midnight-blue); transform: scale(0.99); }
     .error-msg {
       background: #FFEBEE; color: #C62828;
       padding: 10px 14px; border-radius: 6px;
       font-size: 13px; font-weight: 500;
       margin-bottom: 20px; text-align: center;
       border-left: 3px solid #C62828;
-    }
-    .success-msg {
-      background: #E8F5E9; color: #2E7D32;
-      padding: 10px 14px; border-radius: 6px;
-      font-size: 13px; font-weight: 500;
-      margin-bottom: 20px; text-align: center;
-      border-left: 3px solid #2E7D32;
     }
     .info-banner {
       background: #E3F2FD; color: var(--aeroseal-steel-blue);
@@ -95,26 +84,25 @@
 <body>
   <div class="login-card">
     <div class="login-header">
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#005A90" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 22V5a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v17"/><path d="M3 22h10"/><path d="M13 10h2a2 2 0 0 1 2 2v4a2 2 0 0 0 2 2 2 2 0 0 0 2-2V9.83a2 2 0 0 0-.59-1.42L18 6"/><path d="M6 12h4"/><path d="M6 8h4"/></svg>
-      <h1>Set Your Password</h1>
-      <p>Welcome, {{ session.get('display_name', session.get('email', '')) }}</p>
+      <h1>Set Up Your Account</h1>
+      <p>Welcome, {{ user.display_name }}</p>
     </div>
 
     <div class="info-banner">
-      Please choose a new password to continue. Your temporary password will no longer work after this change.
+      Choose a password to activate your account and start reviewing fuel reports.
     </div>
 
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% if messages %}
         {% for category, msg in messages %}
-          <div class="{{ 'success-msg' if category == 'success' else 'error-msg' }}">{{ msg }}</div>
+          <div class="error-msg">{{ msg }}</div>
         {% endfor %}
       {% endif %}
     {% endwith %}
 
-    <form method="POST" action="/change-password">
+    <form method="POST" action="/setup-account/{{ token }}">
       <div class="form-group">
-        <label class="form-label" for="new_password">New Password</label>
+        <label class="form-label" for="new_password">Password</label>
         <input class="form-input" type="password" id="new_password" name="new_password"
                autocomplete="new-password" autofocus required minlength="6"
                placeholder="At least 6 characters">
@@ -124,7 +112,7 @@
         <input class="form-input" type="password" id="confirm_password" name="confirm_password"
                autocomplete="new-password" required>
       </div>
-      <button class="btn-login" type="submit">Set Password & Continue</button>
+      <button class="btn-login" type="submit">Set Password & Sign In</button>
     </form>
   </div>
 </body>

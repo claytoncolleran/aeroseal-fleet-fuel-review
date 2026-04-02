@@ -56,19 +56,21 @@ def init_db():
             CREATE TABLE IF NOT EXISTS users (
                 id SERIAL PRIMARY KEY,
                 email VARCHAR(255) UNIQUE NOT NULL,
-                password_hash VARCHAR(255) NOT NULL,
+                password_hash VARCHAR(255),
                 display_name VARCHAR(255),
                 role VARCHAR(50) NOT NULL DEFAULT 'manager',
                 fleet_group VARCHAR(255),
-                must_change_password BOOLEAN DEFAULT FALSE,
+                invite_token VARCHAR(64),
+                invite_expires TIMESTAMP,
                 created_at TIMESTAMP DEFAULT NOW(),
                 created_by VARCHAR(255),
                 updated_at TIMESTAMP,
                 updated_by VARCHAR(255)
             );
-            -- Add column to existing tables (safe to run repeatedly)
-            -- Default FALSE for existing users; new users get TRUE via INSERT
-            ALTER TABLE users ADD COLUMN IF NOT EXISTS must_change_password BOOLEAN DEFAULT FALSE;
+            ALTER TABLE users ADD COLUMN IF NOT EXISTS invite_token VARCHAR(64);
+            ALTER TABLE users ADD COLUMN IF NOT EXISTS invite_expires TIMESTAMP;
+            -- Drop old column if it exists (replaced by invite flow)
+            ALTER TABLE users DROP COLUMN IF EXISTS must_change_password;
 
             CREATE TABLE IF NOT EXISTS reviews (
                 id SERIAL PRIMARY KEY,
@@ -182,19 +184,22 @@ def db_get_users():
     """Return all users as dict keyed by email."""
     with get_db() as conn:
         cur = conn.cursor()
-        cur.execute("SELECT email, password_hash, display_name, role, fleet_group, must_change_password, created_at, created_by, updated_at, updated_by FROM users")
+        cur.execute("SELECT email, password_hash, display_name, role, fleet_group, invite_token, invite_expires, created_at, created_by, updated_at, updated_by FROM users")
         users = {}
         for row in cur.fetchall():
+            has_password = row[1] is not None and row[1] != ''
             users[row[0]] = {
                 "password_hash": row[1],
                 "display_name": row[2],
                 "role": row[3],
                 "fleet_group": row[4],
-                "must_change_password": row[5] if row[5] is not None else False,
-                "created_at": row[6].isoformat() if row[6] else None,
-                "created_by": row[7],
-                "updated_at": row[8].isoformat() if row[8] else None,
-                "updated_by": row[9],
+                "invite_token": row[5],
+                "invite_expires": row[6].isoformat() if row[6] else None,
+                "status": "active" if has_password else "pending",
+                "created_at": row[7].isoformat() if row[7] else None,
+                "created_by": row[8],
+                "updated_at": row[9].isoformat() if row[9] else None,
+                "updated_by": row[10],
             }
         return users
 
@@ -203,11 +208,10 @@ def db_get_user(email):
     """Return a single user dict or None."""
     with get_db() as conn:
         cur = conn.cursor()
-        cur.execute("SELECT password_hash, display_name, role, fleet_group, must_change_password FROM users WHERE email = %s", (email,))
+        cur.execute("SELECT password_hash, display_name, role, fleet_group FROM users WHERE email = %s", (email,))
         row = cur.fetchone()
         if row:
-            return {"password_hash": row[0], "display_name": row[1], "role": row[2],
-                    "fleet_group": row[3], "must_change_password": row[4] if row[4] is not None else False}
+            return {"password_hash": row[0], "display_name": row[1], "role": row[2], "fleet_group": row[3]}
         return None
 
 
@@ -215,8 +219,53 @@ def db_create_user(email, password_hash, display_name, role, fleet_group, create
     with get_db() as conn:
         cur = conn.cursor()
         cur.execute(
-            "INSERT INTO users (email, password_hash, display_name, role, fleet_group, must_change_password, created_by) VALUES (%s, %s, %s, %s, %s, TRUE, %s)",
+            "INSERT INTO users (email, password_hash, display_name, role, fleet_group, created_by) VALUES (%s, %s, %s, %s, %s, %s)",
             (email, password_hash, display_name, role, fleet_group, created_by)
+        )
+
+
+def db_create_invited_user(email, display_name, role, fleet_group, invite_token, created_by=None):
+    """Create a user with no password and an invite token."""
+    with get_db() as conn:
+        cur = conn.cursor()
+        cur.execute(
+            """INSERT INTO users (email, password_hash, display_name, role, fleet_group, invite_token, invite_expires, created_by)
+               VALUES (%s, NULL, %s, %s, %s, %s, NOW() + INTERVAL '48 hours', %s)""",
+            (email, display_name, role, fleet_group, invite_token, created_by)
+        )
+
+
+def db_get_user_by_token(token):
+    """Look up a user by invite token. Returns user dict or None."""
+    with get_db() as conn:
+        cur = conn.cursor()
+        cur.execute("SELECT email, display_name, role, fleet_group, invite_expires FROM users WHERE invite_token = %s", (token,))
+        row = cur.fetchone()
+        if row:
+            return {
+                "email": row[0], "display_name": row[1], "role": row[2],
+                "fleet_group": row[3], "invite_expires": row[4],
+            }
+        return None
+
+
+def db_set_password_and_clear_token(email, password_hash):
+    """Set password and clear the invite token."""
+    with get_db() as conn:
+        cur = conn.cursor()
+        cur.execute(
+            "UPDATE users SET password_hash = %s, invite_token = NULL, invite_expires = NULL, updated_at = NOW() WHERE email = %s",
+            (password_hash, email)
+        )
+
+
+def db_set_invite_token(email, token):
+    """Set or refresh an invite/reset token (48hr expiry)."""
+    with get_db() as conn:
+        cur = conn.cursor()
+        cur.execute(
+            "UPDATE users SET invite_token = %s, invite_expires = NOW() + INTERVAL '48 hours', password_hash = NULL, updated_at = NOW() WHERE email = %s",
+            (token, email)
         )
 
 
@@ -225,7 +274,7 @@ def db_update_user(email, **kwargs):
         cur = conn.cursor()
         sets = []
         vals = []
-        for key in ("display_name", "role", "fleet_group", "password_hash", "must_change_password", "updated_by"):
+        for key in ("display_name", "role", "fleet_group", "password_hash", "updated_by"):
             if key in kwargs and kwargs[key] is not None:
                 sets.append(f"{key} = %s")
                 vals.append(kwargs[key])

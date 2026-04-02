@@ -4,12 +4,12 @@
 <div class="page-header">
   <p style="margin-bottom: 4px;"><a href="/admin">&larr; Back to Admin</a></p>
   <h1>User Management</h1>
-  <p>Create and manage user accounts for fleet managers and administrators</p>
+  <p>Invite and manage user accounts for fleet managers and administrators</p>
 </div>
 
-<!-- Create User Form -->
+<!-- Invite User Form -->
 <div class="card" style="padding: 24px; margin-bottom: 24px;">
-  <h2 style="font-size: 16px; font-weight: 700; color: var(--aeroseal-steel-blue); margin-bottom: 16px;">Create New User</h2>
+  <h2 style="font-size: 16px; font-weight: 700; color: var(--aeroseal-steel-blue); margin-bottom: 16px;">Invite New User</h2>
   <div id="create-error" class="section-banner banner-warn" style="display: none; margin-bottom: 12px;"></div>
   <div id="create-success" class="section-banner banner-info" style="display: none; margin-bottom: 12px;"></div>
   <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr auto; gap: 12px; align-items: end;">
@@ -37,12 +37,8 @@
         {% endfor %}
       </select>
     </div>
-    <div style="display: flex; gap: 8px; align-items: end;">
-      <div>
-        <label class="form-label" style="display: block; font-size: 12px; font-weight: 600; color: var(--aeroseal-midnight-blue); margin-bottom: 4px;">Password</label>
-        <input type="password" id="new-password" class="form-input" placeholder="Password" style="font-size: 14px; padding: 10px 12px; border: 1px solid var(--aeroseal-titanium); border-radius: 6px; width: 140px;">
-      </div>
-      <button class="btn btn-approve" style="padding: 10px 20px; font-size: 14px; white-space: nowrap;" onclick="createUser()">Create User</button>
+    <div>
+      <button class="btn btn-approve" style="padding: 10px 20px; font-size: 14px; white-space: nowrap;" onclick="inviteUser()">Invite User</button>
     </div>
   </div>
 </div>
@@ -60,15 +56,15 @@
         <th>Display Name</th>
         <th>Role</th>
         <th>Fleet Group</th>
-        <th>Created</th>
+        <th>Status</th>
         <th>Actions</th>
       </tr>
     </thead>
     <tbody>
-      {% for username, user in users|dictsort %}
-      <tr id="user-row-{{ username }}">
-        <td><strong>{{ username }}</strong></td>
-        <td>{{ user.get('display_name', username) }}</td>
+      {% for email, user in users|dictsort %}
+      <tr id="user-row-{{ email }}">
+        <td><strong>{{ email }}</strong></td>
+        <td>{{ user.get('display_name', email) }}</td>
         <td>
           {% if user.role == 'admin' %}
             <span style="background: var(--aeroseal-sapphire); color: #fff; padding: 2px 10px; border-radius: 12px; font-size: 11px; font-weight: 600;">Admin</span>
@@ -76,13 +72,21 @@
             <span style="background: #E3F2FD; color: #1565C0; padding: 2px 10px; border-radius: 12px; font-size: 11px; font-weight: 600;">Manager</span>
           {% endif %}
         </td>
-        <td>{{ user.get('fleet_group', '—') or '—' }}</td>
-        <td style="font-size: 12px; color: #5A6B7B;">{{ (user.get('created_at', '')[:10]) }}</td>
+        <td>{{ user.get('fleet_group', '') or '' }}</td>
         <td>
-          {% if username != current_user.email %}
-            <button class="btn btn-sm" style="font-size: 11px; padding: 4px 12px; background: transparent; color: var(--aeroseal-steel-blue); border: 1px solid var(--aeroseal-steel-blue); border-radius: 4px; cursor: pointer;" onclick="openEditModal('{{ username }}', '{{ user.get('display_name', '') }}', '{{ user.get('role', 'manager') }}', '{{ user.get('fleet_group', '') }}')">Edit</button>
-            <button class="btn btn-sm" style="font-size: 11px; padding: 4px 12px; background: transparent; color: var(--aeroseal-sapphire); border: 1px solid var(--aeroseal-sapphire); border-radius: 4px; cursor: pointer; margin-left: 4px;" onclick="resetPassword('{{ username }}')">Reset Password</button>
-            <button class="btn btn-sm" style="font-size: 11px; padding: 4px 12px; background: transparent; color: #C62828; border: 1px solid #C62828; border-radius: 4px; cursor: pointer; margin-left: 4px;" onclick="deleteUser('{{ username }}')">Delete</button>
+          {% if user.get('status') == 'active' %}
+            <span style="background: #E8F5E9; color: #2E7D32; padding: 2px 10px; border-radius: 12px; font-size: 11px; font-weight: 600;">Active</span>
+          {% else %}
+            <span style="background: #FFF3E0; color: #E65100; padding: 2px 10px; border-radius: 12px; font-size: 11px; font-weight: 600;">Pending</span>
+          {% endif %}
+        </td>
+        <td>
+          {% if email != current_user.email %}
+            <button class="btn btn-sm" style="font-size: 11px; padding: 4px 12px; background: transparent; color: var(--aeroseal-steel-blue); border: 1px solid var(--aeroseal-steel-blue); border-radius: 4px; cursor: pointer;" onclick="openEditModal('{{ email }}', '{{ user.get('display_name', '') }}', '{{ user.get('role', 'manager') }}', '{{ user.get('fleet_group', '') }}')">Edit</button>
+            <button class="btn btn-sm" style="font-size: 11px; padding: 4px 12px; background: transparent; color: var(--aeroseal-sapphire); border: 1px solid var(--aeroseal-sapphire); border-radius: 4px; cursor: pointer; margin-left: 4px;" onclick="resendInvite('{{ email }}')">
+              {% if user.get('status') == 'active' %}Reset Password{% else %}Resend Invite{% endif %}
+            </button>
+            <button class="btn btn-sm" style="font-size: 11px; padding: 4px 12px; background: transparent; color: #C62828; border: 1px solid #C62828; border-radius: 4px; cursor: pointer; margin-left: 4px;" onclick="deleteUser('{{ email }}')">Delete</button>
           {% else %}
             <span style="font-size: 12px; color: #999;">Current user</span>
           {% endif %}
@@ -92,6 +96,7 @@
     </tbody>
   </table>
 </div>
+
 <!-- Edit User Modal -->
 <div id="edit-modal" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.4); z-index:1000; align-items:center; justify-content:center;">
   <div style="background:#fff; border-radius:12px; padding:28px 32px; max-width:480px; width:90%; box-shadow:0 8px 32px rgba(0,0,0,0.18);">
@@ -143,54 +148,54 @@ function showMsg(id, msg) {
   const el = document.getElementById(id);
   el.textContent = msg;
   el.style.display = 'block';
-  setTimeout(() => el.style.display = 'none', 4000);
+  setTimeout(() => el.style.display = 'none', 5000);
 }
 
-function createUser() {
+function inviteUser() {
   const data = {
-    username: document.getElementById('new-email').value.trim(),
+    email: document.getElementById('new-email').value.trim(),
     display_name: document.getElementById('new-display').value.trim(),
     role: document.getElementById('new-role').value,
     fleet_group: document.getElementById('new-group').value,
-    password: document.getElementById('new-password').value,
   };
 
-  if (!data.username || !data.password) {
-    showMsg('create-error', 'Username and password are required.');
+  if (!data.email) {
+    showMsg('create-error', 'Email is required.');
     return;
   }
 
-  fetch('/api/users', {
+  fetch('/api/users/invite', {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
     body: JSON.stringify(data)
   }).then(r => r.json()).then(resp => {
     if (resp.status === 'ok') {
-      showMsg('create-success', 'User "' + data.username + '" created successfully.');
-      setTimeout(() => location.reload(), 1000);
+      const msg = resp.warning || ('Invite sent to ' + data.email);
+      showMsg('create-success', msg);
+      setTimeout(() => location.reload(), 1500);
     } else {
-      showMsg('create-error', resp.message || 'Failed to create user.');
+      showMsg('create-error', resp.message || 'Failed to invite user.');
     }
   }).catch(() => showMsg('create-error', 'Request failed.'));
 }
 
-function resetPassword(username) {
-  const newPw = prompt('Enter new password for ' + username + ':');
-  if (!newPw) return;
+function resendInvite(email) {
+  if (!confirm('Send a password setup link to ' + email + '? This will invalidate their current password.')) return;
 
-  fetch('/api/users/' + username, {
-    method: 'PUT',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({password: newPw})
+  fetch('/api/users/' + encodeURIComponent(email) + '/resend-invite', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'}
   }).then(r => r.json()).then(resp => {
     if (resp.status === 'ok') {
-      alert('Password updated for ' + username);
+      alert('Setup link sent to ' + email);
+      location.reload();
     } else {
-      alert(resp.message || 'Failed to update password.');
+      alert(resp.message || 'Failed to send.');
     }
-  });
+  }).catch(() => alert('Request failed.'));
 }
 
+// ─── Edit Modal ───
 function openEditModal(email, displayName, role, fleetGroup) {
   document.getElementById('edit-email-key').value = email;
   document.getElementById('edit-email-display').value = email;
@@ -240,24 +245,23 @@ function saveEdit() {
   });
 }
 
-// Close modal on backdrop click
 document.getElementById('edit-modal').addEventListener('click', function(e) {
   if (e.target === this) closeEditModal();
 });
 
-function deleteUser(username) {
-  if (!confirm('Delete user "' + username + '"? This cannot be undone.')) return;
+function deleteUser(email) {
+  if (!confirm('Delete user "' + email + '"? This cannot be undone.')) return;
 
-  fetch('/api/users/' + username, {
+  fetch('/api/users/' + encodeURIComponent(email), {
     method: 'DELETE',
     headers: {'Content-Type': 'application/json'}
   }).then(r => r.json()).then(resp => {
     if (resp.status === 'ok') {
-      document.getElementById('user-row-' + username).remove();
+      document.getElementById('user-row-' + email).remove();
     } else {
       alert(resp.message || 'Failed to delete user.');
     }
-  });
+  }).catch(() => alert('Request failed.'));
 }
 </script>
 {% endblock %}

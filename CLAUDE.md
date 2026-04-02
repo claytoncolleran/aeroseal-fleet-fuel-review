@@ -30,11 +30,13 @@ Fuel analytics and fleet manager review workflow for Aeroseal's fleet. Ingests m
 ## Authentication
 - **Email-based login** — users log in with email + password
 - **Two roles:** `admin` (full access + user management) and `manager` (sees only assigned fleet group)
+- **Invite flow:** admins invite users via email (no temp passwords). User receives a link to `/setup-account/<token>` where they set their own password. Tokens expire after 48 hours.
+- **Password reset:** admins click "Reset Password" which sends a new setup link via email, invalidating the old password
 - **Password hashing:** pbkdf2:sha256 via werkzeug
 - **Session-based** — Flask session cookies
 - **User data** stored in PostgreSQL `users` table (or `users.json` on persistent disk as fallback)
 - **Default admin** auto-created on first run from `ADMIN_DEFAULT_EMAIL` + `ADMIN_DEFAULT_PASSWORD` env vars
-- **User management:** admins create/edit/delete users at `/admin/users`
+- **User management:** admins invite/edit/delete users at `/admin/users`
 
 ## Monthly Review Workflow
 1. **Admin** goes to `/admin/reviews` → uploads Corpay spreadsheet, sets period, label, and deadline
