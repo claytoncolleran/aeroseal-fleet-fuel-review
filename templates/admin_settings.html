@@ -1,0 +1,426 @@
+{% extends "base.html" %}
+{% block title %}Flag Settings{% endblock %}
+{% block content %}
+<div class="page-header">
+  <p style="margin-bottom: 4px;"><a href="/admin">&larr; Back to Admin</a></p>
+  <h1>Flag Settings</h1>
+  <p>Configure anomaly detection thresholds globally and per fleet group</p>
+</div>
+
+<div id="save-success" class="section-banner banner-info" style="display: none; margin-bottom: 16px;"></div>
+<div id="save-error" class="section-banner banner-warn" style="display: none; margin-bottom: 16px;"></div>
+
+<!-- Global Defaults -->
+<div class="card" style="padding: 24px; margin-bottom: 24px;">
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+    <h2 style="font-size: 16px; font-weight: 700; color: var(--aeroseal-steel-blue);">Global Defaults</h2>
+    <button class="btn btn-approve" style="padding: 8px 20px; font-size: 13px;" onclick="saveGlobals()">Save Defaults</button>
+  </div>
+  <p style="font-size: 13px; color: #5A6B7B; margin-bottom: 16px;">These thresholds apply to all fleet groups unless overridden below.</p>
+
+  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+    {% for flag_num in [1,2,3,4,5,6] %}
+    {% set cfg = global_settings.get(flag_num, flag_defaults.get(flag_num, {})) %}
+    <div class="flag-setting-card" style="border: 1px solid var(--aeroseal-titanium); border-radius: 8px; padding: 16px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span class="flag-badge flag-{{ flag_num }}" style="font-size: 11px;">F{{ flag_num }}</span>
+          <strong style="font-size: 14px; color: var(--aeroseal-midnight-blue);">
+            {% if flag_num == 1 %}Fuel Efficiency{% elif flag_num == 2 %}Cost Per Gallon{% elif flag_num == 3 %}Odometer Issue{% elif flag_num == 4 %}Small Fill{% elif flag_num == 5 %}High Frequency{% elif flag_num == 6 %}Wrong Fuel Type{% endif %}
+          </strong>
+        </div>
+        <label style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: #5A6B7B; cursor: pointer;">
+          <input type="checkbox" id="global-enabled-{{ flag_num }}" {% if cfg.get('enabled', true) %}checked{% endif %} style="accent-color: var(--aeroseal-sapphire);">
+          Enabled
+        </label>
+      </div>
+
+      {% if flag_num == 1 %}
+      <div style="display: flex; align-items: center; gap: 8px; font-size: 13px;">
+        <span style="color: #5A6B7B;">Flag if period MPG is</span>
+        <input type="number" id="global-f1-threshold" value="{{ cfg.get('threshold_pct', 20) }}" min="1" max="100" style="width: 60px; padding: 6px 8px; border: 1px solid var(--aeroseal-titanium); border-radius: 4px; font-size: 13px; text-align: center;">
+        <span style="color: #5A6B7B;">% below baseline</span>
+      </div>
+
+      {% elif flag_num == 2 %}
+      <div style="display: flex; align-items: center; gap: 8px; font-size: 13px;">
+        <span style="color: #5A6B7B;">Flag if cost/gal is</span>
+        <input type="number" id="global-f2-threshold" value="{{ cfg.get('threshold_pct', 15) }}" min="1" max="100" style="width: 60px; padding: 6px 8px; border: 1px solid var(--aeroseal-titanium); border-radius: 4px; font-size: 13px; text-align: center;">
+        <span style="color: #5A6B7B;">% above monthly median</span>
+      </div>
+
+      {% elif flag_num == 3 %}
+      <div style="font-size: 13px; color: #5A6B7B;">Flags missing or decreasing odometer readings. No threshold to configure.</div>
+
+      {% elif flag_num == 4 %}
+      <div style="display: flex; align-items: center; gap: 8px; font-size: 13px;">
+        <span style="color: #5A6B7B;">Flag if fill is below</span>
+        <input type="number" id="global-f4-threshold" value="{{ cfg.get('threshold_pct', 25) }}" min="1" max="100" style="width: 60px; padding: 6px 8px; border: 1px solid var(--aeroseal-titanium); border-radius: 4px; font-size: 13px; text-align: center;">
+        <span style="color: #5A6B7B;">% of vehicle average</span>
+      </div>
+
+      {% elif flag_num == 5 %}
+      <div style="display: flex; align-items: center; gap: 8px; font-size: 13px; flex-wrap: wrap;">
+        <span style="color: #5A6B7B;">Flag if driver has more than</span>
+        <input type="number" id="global-f5-count" value="{{ cfg.get('fill_count', 3) }}" min="1" max="20" style="width: 50px; padding: 6px 8px; border: 1px solid var(--aeroseal-titanium); border-radius: 4px; font-size: 13px; text-align: center;">
+        <span style="color: #5A6B7B;">fills in</span>
+        <input type="number" id="global-f5-hours" value="{{ cfg.get('window_hours', 24) }}" min="1" max="168" style="width: 50px; padding: 6px 8px; border: 1px solid var(--aeroseal-titanium); border-radius: 4px; font-size: 13px; text-align: center;">
+        <span style="color: #5A6B7B;">hours</span>
+      </div>
+
+      {% elif flag_num == 6 %}
+      <div style="font-size: 13px; color: #5A6B7B; margin-bottom: 8px;">Allowed fuel types for gas vehicles:</div>
+      {% set allowed = cfg.get('allowed_fuel_types', ['Regular Unleaded']) %}
+      <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+        {% for ft in ['Regular Unleaded', 'Midgrade', 'Premium', 'Diesel'] %}
+        <label style="display: flex; align-items: center; gap: 4px; font-size: 13px; color: var(--aeroseal-midnight-blue); cursor: pointer;">
+          <input type="checkbox" class="global-f6-fuel" value="{{ ft }}" {% if ft in allowed %}checked{% endif %} style="accent-color: var(--aeroseal-sapphire);">
+          {{ ft }}
+        </label>
+        {% endfor %}
+      </div>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+<!-- Group Overrides -->
+<div class="card" style="padding: 24px;">
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+    <h2 style="font-size: 16px; font-weight: 700; color: var(--aeroseal-steel-blue);">Fleet Group Overrides</h2>
+  </div>
+  <p style="font-size: 13px; color: #5A6B7B; margin-bottom: 16px;">Override specific flags for individual fleet groups. Groups without overrides use the global defaults above.</p>
+
+  <div style="display: flex; gap: 12px; align-items: center; margin-bottom: 20px;">
+    <select id="group-select" style="font-family: var(--font-primary); font-size: 14px; padding: 10px 14px; border: 1px solid var(--aeroseal-titanium); border-radius: 6px; background: #fff; min-width: 240px;" onchange="selectGroup()">
+      <option value="">Select fleet group...</option>
+      {% for g in fleet_groups %}
+      <option value="{{ g }}" {% if group_overrides.get(g) %}style="font-weight: 600;"{% endif %}>
+        {{ g }}{% if group_overrides.get(g) %} ({{ group_overrides[g]|length }} override{{ 's' if group_overrides[g]|length != 1 }}){% endif %}
+      </option>
+      {% endfor %}
+    </select>
+  </div>
+
+  <div id="group-panel" style="display: none;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+      <h3 id="group-panel-title" style="font-size: 15px; font-weight: 600; color: var(--aeroseal-midnight-blue);"></h3>
+      <button class="btn btn-approve" style="padding: 8px 20px; font-size: 13px;" onclick="saveGroupOverrides()">Save Overrides</button>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+      {% for flag_num in [1,2,3,4,5,6] %}
+      <div class="flag-setting-card" id="group-flag-{{ flag_num }}" style="border: 1px solid var(--aeroseal-titanium); border-radius: 8px; padding: 16px; position: relative;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span class="flag-badge flag-{{ flag_num }}" style="font-size: 11px;">F{{ flag_num }}</span>
+            <strong style="font-size: 14px; color: var(--aeroseal-midnight-blue);">
+              {% if flag_num == 1 %}Fuel Efficiency{% elif flag_num == 2 %}Cost Per Gallon{% elif flag_num == 3 %}Odometer Issue{% elif flag_num == 4 %}Small Fill{% elif flag_num == 5 %}High Frequency{% elif flag_num == 6 %}Wrong Fuel Type{% endif %}
+            </strong>
+          </div>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <label style="display: flex; align-items: center; gap: 4px; font-size: 12px; color: #5A6B7B; cursor: pointer;">
+              <input type="checkbox" class="group-override-toggle" data-flag="{{ flag_num }}" onchange="toggleOverride({{ flag_num }})" style="accent-color: var(--aeroseal-citrus-green);">
+              Override
+            </label>
+          </div>
+        </div>
+
+        <div class="group-override-fields" id="group-fields-{{ flag_num }}" style="display: none; opacity: 0.5;">
+          {% if flag_num == 1 %}
+          <div style="display: flex; align-items: center; gap: 8px; font-size: 13px; margin-bottom: 6px;">
+            <label style="display: flex; align-items: center; gap: 4px; cursor: pointer;">
+              <input type="checkbox" id="group-enabled-{{ flag_num }}" checked style="accent-color: var(--aeroseal-sapphire);"> Enabled
+            </label>
+          </div>
+          <div style="display: flex; align-items: center; gap: 8px; font-size: 13px;">
+            <span style="color: #5A6B7B;">Threshold:</span>
+            <input type="number" id="group-f1-threshold" value="20" min="1" max="100" style="width: 60px; padding: 6px 8px; border: 1px solid var(--aeroseal-titanium); border-radius: 4px; font-size: 13px; text-align: center;">
+            <span style="color: #5A6B7B;">% below baseline</span>
+          </div>
+
+          {% elif flag_num == 2 %}
+          <div style="display: flex; align-items: center; gap: 8px; font-size: 13px; margin-bottom: 6px;">
+            <label style="display: flex; align-items: center; gap: 4px; cursor: pointer;">
+              <input type="checkbox" id="group-enabled-{{ flag_num }}" checked style="accent-color: var(--aeroseal-sapphire);"> Enabled
+            </label>
+          </div>
+          <div style="display: flex; align-items: center; gap: 8px; font-size: 13px;">
+            <span style="color: #5A6B7B;">Threshold:</span>
+            <input type="number" id="group-f2-threshold" value="15" min="1" max="100" style="width: 60px; padding: 6px 8px; border: 1px solid var(--aeroseal-titanium); border-radius: 4px; font-size: 13px; text-align: center;">
+            <span style="color: #5A6B7B;">% above median</span>
+          </div>
+
+          {% elif flag_num == 3 %}
+          <div style="display: flex; align-items: center; gap: 8px; font-size: 13px;">
+            <label style="display: flex; align-items: center; gap: 4px; cursor: pointer;">
+              <input type="checkbox" id="group-enabled-{{ flag_num }}" checked style="accent-color: var(--aeroseal-sapphire);"> Enabled
+            </label>
+          </div>
+
+          {% elif flag_num == 4 %}
+          <div style="display: flex; align-items: center; gap: 8px; font-size: 13px; margin-bottom: 6px;">
+            <label style="display: flex; align-items: center; gap: 4px; cursor: pointer;">
+              <input type="checkbox" id="group-enabled-{{ flag_num }}" checked style="accent-color: var(--aeroseal-sapphire);"> Enabled
+            </label>
+          </div>
+          <div style="display: flex; align-items: center; gap: 8px; font-size: 13px;">
+            <span style="color: #5A6B7B;">Threshold:</span>
+            <input type="number" id="group-f4-threshold" value="25" min="1" max="100" style="width: 60px; padding: 6px 8px; border: 1px solid var(--aeroseal-titanium); border-radius: 4px; font-size: 13px; text-align: center;">
+            <span style="color: #5A6B7B;">% of vehicle avg</span>
+          </div>
+
+          {% elif flag_num == 5 %}
+          <div style="display: flex; align-items: center; gap: 8px; font-size: 13px; margin-bottom: 6px;">
+            <label style="display: flex; align-items: center; gap: 4px; cursor: pointer;">
+              <input type="checkbox" id="group-enabled-{{ flag_num }}" checked style="accent-color: var(--aeroseal-sapphire);"> Enabled
+            </label>
+          </div>
+          <div style="display: flex; align-items: center; gap: 8px; font-size: 13px; flex-wrap: wrap;">
+            <span style="color: #5A6B7B;">More than</span>
+            <input type="number" id="group-f5-count" value="3" min="1" max="20" style="width: 50px; padding: 6px 8px; border: 1px solid var(--aeroseal-titanium); border-radius: 4px; font-size: 13px; text-align: center;">
+            <span style="color: #5A6B7B;">fills in</span>
+            <input type="number" id="group-f5-hours" value="24" min="1" max="168" style="width: 50px; padding: 6px 8px; border: 1px solid var(--aeroseal-titanium); border-radius: 4px; font-size: 13px; text-align: center;">
+            <span style="color: #5A6B7B;">hours</span>
+          </div>
+
+          {% elif flag_num == 6 %}
+          <div style="display: flex; align-items: center; gap: 8px; font-size: 13px; margin-bottom: 6px;">
+            <label style="display: flex; align-items: center; gap: 4px; cursor: pointer;">
+              <input type="checkbox" id="group-enabled-{{ flag_num }}" checked style="accent-color: var(--aeroseal-sapphire);"> Enabled
+            </label>
+          </div>
+          <div style="font-size: 13px; color: #5A6B7B; margin-bottom: 6px;">Allowed fuel types:</div>
+          <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+            {% for ft in ['Regular Unleaded', 'Midgrade', 'Premium', 'Diesel'] %}
+            <label style="display: flex; align-items: center; gap: 4px; font-size: 13px; cursor: pointer;">
+              <input type="checkbox" class="group-f6-fuel" value="{{ ft }}" {% if ft == 'Regular Unleaded' %}checked{% endif %} style="accent-color: var(--aeroseal-sapphire);">
+              {{ ft }}
+            </label>
+            {% endfor %}
+          </div>
+          {% endif %}
+        </div>
+
+        <div class="group-default-label" id="group-default-{{ flag_num }}" style="font-size: 12px; color: #999; font-style: italic;">Using global defaults</div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<!-- Reprocess Banner -->
+<div class="card" style="padding: 20px; margin-top: 24px; border-left: 3px solid var(--aeroseal-citrus-green);">
+  <div style="display: flex; justify-content: space-between; align-items: center;">
+    <div>
+      <strong style="font-size: 14px; color: var(--aeroseal-midnight-blue);">Apply Settings to Active Review</strong>
+      <p style="font-size: 13px; color: #5A6B7B; margin-top: 2px;">Reprocess the current review with updated flag settings. Existing manager decisions are preserved.</p>
+    </div>
+    <button id="reprocess-btn" class="btn" style="padding: 10px 24px; font-size: 14px; font-weight: 600; background: var(--aeroseal-citrus-green); color: var(--aeroseal-midnight-blue); border: none; border-radius: 6px; cursor: pointer; white-space: nowrap;" onclick="reprocessReview()">
+      Reprocess Review
+    </button>
+  </div>
+  <div id="reprocess-status" style="display: none; margin-top: 12px; font-size: 13px;"></div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// ─── Group overrides data from server ───
+const groupOverrides = {{ group_overrides | tojson }};
+const globalSettings = {{ global_settings | tojson }};
+
+// ─── Global Defaults ───
+function readGlobals() {
+  const data = {};
+  for (let f = 1; f <= 6; f++) {
+    const enabled = document.getElementById('global-enabled-' + f).checked;
+    const cfg = {enabled};
+    if (f === 1) cfg.threshold_pct = parseInt(document.getElementById('global-f1-threshold').value) || 20;
+    if (f === 2) cfg.threshold_pct = parseInt(document.getElementById('global-f2-threshold').value) || 15;
+    if (f === 4) cfg.threshold_pct = parseInt(document.getElementById('global-f4-threshold').value) || 25;
+    if (f === 5) {
+      cfg.fill_count = parseInt(document.getElementById('global-f5-count').value) || 3;
+      cfg.window_hours = parseInt(document.getElementById('global-f5-hours').value) || 24;
+    }
+    if (f === 6) {
+      cfg.allowed_fuel_types = Array.from(document.querySelectorAll('.global-f6-fuel:checked')).map(cb => cb.value);
+    }
+    data[f] = cfg;
+  }
+  return data;
+}
+
+function saveGlobals() {
+  const data = readGlobals();
+  fetch('/api/settings/global', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(data)
+  }).then(r => r.json()).then(resp => {
+    if (resp.status === 'ok') showMsg('save-success', 'Global defaults saved.');
+    else showMsg('save-error', resp.message || 'Failed to save.');
+  }).catch(() => showMsg('save-error', 'Request failed.'));
+}
+
+// ─── Group Overrides ───
+function selectGroup() {
+  const group = document.getElementById('group-select').value;
+  const panel = document.getElementById('group-panel');
+  if (!group) { panel.style.display = 'none'; return; }
+
+  panel.style.display = 'block';
+  document.getElementById('group-panel-title').textContent = group + ' — Flag Overrides';
+
+  const overrides = groupOverrides[group] || {};
+
+  for (let f = 1; f <= 6; f++) {
+    const toggle = document.querySelector('.group-override-toggle[data-flag="' + f + '"]');
+    const fields = document.getElementById('group-fields-' + f);
+    const defaultLabel = document.getElementById('group-default-' + f);
+    const hasOverride = overrides[f] !== undefined;
+
+    toggle.checked = hasOverride;
+    fields.style.display = hasOverride ? 'block' : 'none';
+    fields.style.opacity = hasOverride ? '1' : '0.5';
+    defaultLabel.style.display = hasOverride ? 'none' : 'block';
+
+    if (hasOverride) {
+      const cfg = overrides[f].config || {};
+      const enabled = overrides[f].enabled !== false;
+      const enabledEl = document.getElementById('group-enabled-' + f);
+      if (enabledEl) enabledEl.checked = enabled;
+
+      if (f === 1 && cfg.threshold_pct !== undefined) document.getElementById('group-f1-threshold').value = cfg.threshold_pct;
+      if (f === 2 && cfg.threshold_pct !== undefined) document.getElementById('group-f2-threshold').value = cfg.threshold_pct;
+      if (f === 4 && cfg.threshold_pct !== undefined) document.getElementById('group-f4-threshold').value = cfg.threshold_pct;
+      if (f === 5) {
+        if (cfg.fill_count !== undefined) document.getElementById('group-f5-count').value = cfg.fill_count;
+        if (cfg.window_hours !== undefined) document.getElementById('group-f5-hours').value = cfg.window_hours;
+      }
+      if (f === 6 && cfg.allowed_fuel_types) {
+        document.querySelectorAll('.group-f6-fuel').forEach(cb => {
+          cb.checked = cfg.allowed_fuel_types.includes(cb.value);
+        });
+      }
+    } else {
+      // Reset to global defaults for display
+      const g = globalSettings[f] || {};
+      const enabledEl = document.getElementById('group-enabled-' + f);
+      if (enabledEl) enabledEl.checked = g.enabled !== false;
+      if (f === 1) document.getElementById('group-f1-threshold').value = g.threshold_pct || 20;
+      if (f === 2) document.getElementById('group-f2-threshold').value = g.threshold_pct || 15;
+      if (f === 4) document.getElementById('group-f4-threshold').value = g.threshold_pct || 25;
+      if (f === 5) {
+        document.getElementById('group-f5-count').value = g.fill_count || 3;
+        document.getElementById('group-f5-hours').value = g.window_hours || 24;
+      }
+      if (f === 6) {
+        const allowed = g.allowed_fuel_types || ['Regular Unleaded'];
+        document.querySelectorAll('.group-f6-fuel').forEach(cb => {
+          cb.checked = allowed.includes(cb.value);
+        });
+      }
+    }
+  }
+}
+
+function toggleOverride(flagNum) {
+  const toggle = document.querySelector('.group-override-toggle[data-flag="' + flagNum + '"]');
+  const fields = document.getElementById('group-fields-' + flagNum);
+  const defaultLabel = document.getElementById('group-default-' + flagNum);
+  fields.style.display = toggle.checked ? 'block' : 'none';
+  fields.style.opacity = toggle.checked ? '1' : '0.5';
+  defaultLabel.style.display = toggle.checked ? 'none' : 'block';
+}
+
+function saveGroupOverrides() {
+  const group = document.getElementById('group-select').value;
+  if (!group) return;
+
+  const data = {};
+  for (let f = 1; f <= 6; f++) {
+    const toggle = document.querySelector('.group-override-toggle[data-flag="' + f + '"]');
+    if (!toggle.checked) {
+      data[f] = null; // Remove override
+      continue;
+    }
+    const enabled = document.getElementById('group-enabled-' + f)?.checked ?? true;
+    const cfg = {enabled};
+    if (f === 1) cfg.threshold_pct = parseInt(document.getElementById('group-f1-threshold').value) || 20;
+    if (f === 2) cfg.threshold_pct = parseInt(document.getElementById('group-f2-threshold').value) || 15;
+    if (f === 4) cfg.threshold_pct = parseInt(document.getElementById('group-f4-threshold').value) || 25;
+    if (f === 5) {
+      cfg.fill_count = parseInt(document.getElementById('group-f5-count').value) || 3;
+      cfg.window_hours = parseInt(document.getElementById('group-f5-hours').value) || 24;
+    }
+    if (f === 6) {
+      cfg.allowed_fuel_types = Array.from(document.querySelectorAll('.group-f6-fuel:checked')).map(cb => cb.value);
+    }
+    data[f] = cfg;
+  }
+
+  fetch('/api/settings/group/' + encodeURIComponent(group), {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(data)
+  }).then(r => r.json()).then(resp => {
+    if (resp.status === 'ok') {
+      // Update local cache
+      groupOverrides[group] = {};
+      for (const [f, cfg] of Object.entries(data)) {
+        if (cfg !== null) {
+          const enabled = cfg.enabled;
+          const config = Object.assign({}, cfg);
+          delete config.enabled;
+          groupOverrides[group][f] = {enabled, config};
+        }
+      }
+      showMsg('save-success', 'Overrides saved for ' + group + '.');
+    } else {
+      showMsg('save-error', resp.message || 'Failed to save.');
+    }
+  }).catch(() => showMsg('save-error', 'Request failed.'));
+}
+
+// ─── Reprocess ───
+function reprocessReview() {
+  const btn = document.getElementById('reprocess-btn');
+  const status = document.getElementById('reprocess-status');
+  btn.disabled = true;
+  btn.textContent = 'Processing...';
+  status.style.display = 'block';
+  status.innerHTML = '<span style="color: var(--aeroseal-sapphire);">Re-running anomaly detection with current settings...</span>';
+
+  // Get active review period from the page
+  fetch('/api/reviews/{{ (active_review.period if active_review else "") }}/reprocess', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'}
+  }).then(r => r.json()).then(resp => {
+    btn.disabled = false;
+    btn.textContent = 'Reprocess Review';
+    if (resp.status === 'ok') {
+      const s = resp.summary || {};
+      status.innerHTML = '<span style="color: var(--aeroseal-citrus-green); font-weight: 600;">Reprocessing complete.</span> ' +
+        (s.total_vehicle_transactions_analyzed || 0) + ' transactions, ' +
+        (s.total_flagged_transactions || 0) + ' flagged, ' +
+        (s.total_flags || 0) + ' total flags. <a href="/">View Dashboard &rarr;</a>';
+    } else {
+      status.innerHTML = '<span style="color: #C62828;">' + (resp.message || 'Reprocessing failed.') + '</span>';
+    }
+  }).catch(() => {
+    btn.disabled = false;
+    btn.textContent = 'Reprocess Review';
+    status.innerHTML = '<span style="color: #C62828;">Request failed.</span>';
+  });
+}
+
+function showMsg(id, msg) {
+  const el = document.getElementById(id);
+  el.textContent = msg;
+  el.style.display = 'block';
+  setTimeout(() => el.style.display = 'none', 4000);
+}
+</script>
+{% endblock %}

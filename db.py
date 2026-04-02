@@ -154,6 +154,18 @@ def init_db():
                 approved_by VARCHAR(255),
                 approved_at TIMESTAMP DEFAULT NOW()
             );
+
+            CREATE TABLE IF NOT EXISTS flag_settings (
+                id SERIAL PRIMARY KEY,
+                fleet_group VARCHAR(255),
+                flag_number INTEGER NOT NULL,
+                enabled BOOLEAN DEFAULT TRUE,
+                config JSONB DEFAULT '{}',
+                updated_by VARCHAR(255),
+                updated_at TIMESTAMP DEFAULT NOW()
+            );
+            CREATE UNIQUE INDEX IF NOT EXISTS uq_flag_settings_group_flag
+                ON flag_settings (COALESCE(fleet_group, ''), flag_number);
         """)
     print("  Database tables initialized.")
 
@@ -670,6 +682,121 @@ def db_build_report(period):
             "declined_transactions": declined_transactions,
             "mpg_summary_by_vehicle": mpg_summary,
         }
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# FLAG SETTINGS CRUD
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# Default flag configuration — used when no setting exists in the database.
+FLAG_DEFAULTS = {
+    1: {"enabled": True, "threshold_pct": 20},
+    2: {"enabled": True, "threshold_pct": 15},
+    3: {"enabled": True},
+    4: {"enabled": True, "threshold_pct": 25},
+    5: {"enabled": True, "fill_count": 3, "window_hours": 24},
+    6: {"enabled": True, "allowed_fuel_types": ["Regular Unleaded"]},
+}
+
+
+def db_get_flag_settings():
+    """Return all flag settings as a dict: {(fleet_group, flag_number): {enabled, config}}."""
+    with get_db() as conn:
+        cur = conn.cursor()
+        cur.execute("SELECT fleet_group, flag_number, enabled, config FROM flag_settings")
+        settings = {}
+        for row in cur.fetchall():
+            group = row[0]  # None = global default
+            settings[(group, row[1])] = {"enabled": row[2], "config": row[3] or {}}
+        return settings
+
+
+def db_get_global_settings():
+    """Return global defaults from DB, merged with hardcoded defaults."""
+    settings = {}
+    for flag_num, defaults in FLAG_DEFAULTS.items():
+        settings[flag_num] = dict(defaults)
+
+    with get_db() as conn:
+        cur = conn.cursor()
+        cur.execute("SELECT flag_number, enabled, config FROM flag_settings WHERE fleet_group IS NULL")
+        for row in cur.fetchall():
+            merged = dict(FLAG_DEFAULTS.get(row[0], {}))
+            merged["enabled"] = row[1]
+            merged.update(row[2] or {})
+            settings[row[0]] = merged
+
+    return settings
+
+
+def db_get_group_overrides(fleet_group):
+    """Return overrides for a specific group (not merged with globals)."""
+    with get_db() as conn:
+        cur = conn.cursor()
+        cur.execute("SELECT flag_number, enabled, config FROM flag_settings WHERE fleet_group = %s", (fleet_group,))
+        overrides = {}
+        for row in cur.fetchall():
+            overrides[row[0]] = {"enabled": row[1], "config": row[2] or {}}
+        return overrides
+
+
+def db_get_all_group_overrides():
+    """Return all per-group overrides as {group_name: {flag_num: {enabled, config}}}."""
+    with get_db() as conn:
+        cur = conn.cursor()
+        cur.execute("SELECT fleet_group, flag_number, enabled, config FROM flag_settings WHERE fleet_group IS NOT NULL")
+        result = {}
+        for row in cur.fetchall():
+            group = row[0]
+            if group not in result:
+                result[group] = {}
+            result[group][row[1]] = {"enabled": row[2], "config": row[3] or {}}
+        return result
+
+
+def db_save_flag_setting(fleet_group, flag_number, enabled, config, updated_by):
+    """Upsert a flag setting. fleet_group=None for global defaults."""
+    with get_db() as conn:
+        cur = conn.cursor()
+        # Delete existing, then insert (works with COALESCE-based unique index)
+        if fleet_group is None:
+            cur.execute("DELETE FROM flag_settings WHERE fleet_group IS NULL AND flag_number = %s", (flag_number,))
+        else:
+            cur.execute("DELETE FROM flag_settings WHERE fleet_group = %s AND flag_number = %s", (fleet_group, flag_number))
+        cur.execute(
+            """INSERT INTO flag_settings (fleet_group, flag_number, enabled, config, updated_by, updated_at)
+               VALUES (%s, %s, %s, %s::jsonb, %s, NOW())""",
+            (fleet_group, flag_number, enabled, json.dumps(config), updated_by)
+        )
+
+
+def db_delete_group_override(fleet_group, flag_number):
+    """Remove a per-group override (reverts to global default)."""
+    with get_db() as conn:
+        cur = conn.cursor()
+        cur.execute("DELETE FROM flag_settings WHERE fleet_group = %s AND flag_number = %s",
+                    (fleet_group, flag_number))
+
+
+def db_resolve_flag_config(fleet_group=None):
+    """Resolve the effective flag config for a group: global defaults + group overrides.
+    Returns {flag_number: {enabled, ...config params}}."""
+    globals_ = db_get_global_settings()
+
+    if not fleet_group:
+        return globals_
+
+    overrides = db_get_group_overrides(fleet_group)
+    resolved = {}
+    for flag_num in FLAG_DEFAULTS:
+        base = dict(globals_.get(flag_num, FLAG_DEFAULTS[flag_num]))
+        if flag_num in overrides:
+            override = overrides[flag_num]
+            base["enabled"] = override["enabled"]
+            base.update(override.get("config", {}))
+        resolved[flag_num] = base
+
+    return resolved
 
 
 def db_save_admin_approval(review_id, admin_name, approved_by):

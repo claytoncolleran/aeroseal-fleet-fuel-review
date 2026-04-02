@@ -341,13 +341,14 @@ def compute_vehicle_period_mpg(fill_events, baselines):
 
         period_mpg = total_miles / clean_gallons
 
-        # Determine if flagged (> 20% below baseline)
+        # Determine if flagged (> threshold% below baseline)
         flagged = False
         pct_diff = None
         reason = None
         if baseline_mpg and baseline_mpg > 0:
             pct_diff = round(((period_mpg - baseline_mpg) / baseline_mpg) * 100, 1)
-            if period_mpg < baseline_mpg * 0.80:
+            threshold_pct = 20  # default; overridden per-group in main loop
+            if period_mpg < baseline_mpg * (1 - threshold_pct / 100):
                 flagged = True
                 reason = (f"This vehicle averaged {period_mpg:.1f} MPG over {total_miles:,.0f} miles "
                           f"and {clean_gallons:.1f} gallons this period, which is {abs(pct_diff):.0f}% "
@@ -429,7 +430,7 @@ def check_odometer_issues(fill_events):
 
 
 # ─── FLAG 2: Cost Per Gallon Outlier ─────────────────────────────────────────
-def check_flag2(txn, fuel_type_medians):
+def check_flag2(txn, fuel_type_medians, threshold_pct=15):
     gross_ppg = safe_float(txn.get("Gross PPU/PPG"))
     product = (txn.get("Product Description") or "").upper()
 
@@ -441,7 +442,7 @@ def check_flag2(txn, fuel_type_medians):
     if not median or median <= 0:
         return None
 
-    threshold = median * 1.15
+    threshold = median * (1 + threshold_pct / 100)
     if gross_ppg > threshold:
         pct_above = ((gross_ppg - median) / median) * 100
         return {
@@ -458,7 +459,7 @@ def check_flag2(txn, fuel_type_medians):
 
 
 # ─── FLAG 4: Unusually Small Fill ────────────────────────────────────────────
-def check_flag4(gallons, vehicle_avg_fill, vname):
+def check_flag4(gallons, vehicle_avg_fill, vname, threshold_pct=25):
     if not gallons or gallons <= 0:
         return None
 
@@ -466,7 +467,7 @@ def check_flag4(gallons, vehicle_avg_fill, vname):
     if not avg or avg <= 0:
         return None
 
-    threshold = avg * 0.25
+    threshold = avg * (threshold_pct / 100)
     if gallons < threshold:
         return {
             "flag": 4,
@@ -481,8 +482,8 @@ def check_flag4(gallons, vehicle_avg_fill, vname):
 
 
 # ─── FLAG 5: High Frequency Fills ───────────────────────────────────────────
-def check_flag5_bulk(vehicle_txns):
-    """Flag drivers with more than 3 fills within any 24-hour window."""
+def check_flag5_bulk(vehicle_txns, fill_count=3, window_hours=24):
+    """Flag drivers with more than fill_count fills within window_hours."""
     driver_txns = defaultdict(list)
     for item in vehicle_txns:
         row = item["row"]
@@ -497,9 +498,9 @@ def check_flag5_bulk(vehicle_txns):
         txns.sort(key=lambda x: x["dt"])
         for i in range(len(txns)):
             window_start = txns[i]["dt"]
-            window_end = window_start + timedelta(hours=24)
+            window_end = window_start + timedelta(hours=window_hours)
             window_txns = [t for t in txns if window_start <= t["dt"] <= window_end]
-            if len(window_txns) > 3:
+            if len(window_txns) > fill_count:
                 dates = [t["dt"].strftime("%Y-%m-%d %H:%M") for t in window_txns]
                 key = (driver, window_start.strftime("%Y-%m-%d"))
                 if key not in flags:
@@ -507,7 +508,7 @@ def check_flag5_bulk(vehicle_txns):
                         "flag": 5,
                         "flag_name": "High Frequency Fills",
                         "reason": (f"Driver {driver} had {len(window_txns)} fills within "
-                                   f"24 hours on {', '.join(dates[:5])}{'...' if len(dates) > 5 else ''}. "
+                                   f"{window_hours} hours on {', '.join(dates[:5])}{'...' if len(dates) > 5 else ''}. "
                                    f"This pattern may warrant review."),
                         "driver": driver,
                         "fill_count": len(window_txns),
@@ -517,7 +518,10 @@ def check_flag5_bulk(vehicle_txns):
 
 
 # ─── FLAG 6: Wrong Fuel Type ────────────────────────────────────────────────
-def check_flag6(txn, vehicle):
+def check_flag6(txn, vehicle, allowed_fuel_types=None):
+    if allowed_fuel_types is None:
+        allowed_fuel_types = ["Regular Unleaded"]
+
     product = (txn.get("Product Description") or "").upper()
     if not product:
         return None
@@ -532,6 +536,7 @@ def check_flag6(txn, vehicle):
     product_is_premium = "PREMIUM" in product
     product_is_plus = "PLUS" in product or "MIDGRADE" in product or "89 OCTANE" in product
 
+    # Diesel vehicle filled with non-diesel — always flag
     if is_diesel_vehicle and not product_is_diesel:
         return {
             "flag": 6,
@@ -542,6 +547,7 @@ def check_flag6(txn, vehicle):
             "actual_fuel": product,
         }
 
+    # Gas vehicle filled with diesel — always flag
     if is_gas_vehicle and product_is_diesel:
         return {
             "flag": 6,
@@ -552,13 +558,26 @@ def check_flag6(txn, vehicle):
             "actual_fuel": product,
         }
 
-    if is_gas_vehicle and (product_is_premium or product_is_plus):
+    # Gas vehicle filled with premium/midgrade — check allowed list
+    allowed_upper = [a.upper() for a in allowed_fuel_types]
+    if is_gas_vehicle and product_is_premium and "PREMIUM" not in allowed_upper:
         return {
             "flag": 6,
             "flag_name": "Wrong Fuel Type",
             "reason": (f"This vehicle is designated {vehicle.get('fuel_type_name')} "
                        f"but was filled with {product} on {txn_date}. "
-                       f"Gas vehicles should use regular unleaded only."),
+                       f"Allowed fuel types: {', '.join(allowed_fuel_types)}."),
+            "expected_fuel": vehicle.get("fuel_type_name"),
+            "actual_fuel": product,
+        }
+
+    if is_gas_vehicle and product_is_plus and "MIDGRADE" not in allowed_upper:
+        return {
+            "flag": 6,
+            "flag_name": "Wrong Fuel Type",
+            "reason": (f"This vehicle is designated {vehicle.get('fuel_type_name')} "
+                       f"but was filled with {product} on {txn_date}. "
+                       f"Allowed fuel types: {', '.join(allowed_fuel_types)}."),
             "expected_fuel": vehicle.get("fuel_type_name"),
             "actual_fuel": product,
         }
@@ -567,10 +586,42 @@ def check_flag6(txn, vehicle):
 
 
 # ─── Main ────────────────────────────────────────────────────────────────────
-def run(corpay_file=None, baselines_file=None, output_file=None):
+def _resolve_flag_config(group, flag_num, flag_settings):
+    """Resolve effective config for a flag+group. Returns {enabled, ...params}."""
+    defaults = {
+        1: {"enabled": True, "threshold_pct": 20},
+        2: {"enabled": True, "threshold_pct": 15},
+        3: {"enabled": True},
+        4: {"enabled": True, "threshold_pct": 25},
+        5: {"enabled": True, "fill_count": 3, "window_hours": 24},
+        6: {"enabled": True, "allowed_fuel_types": ["Regular Unleaded"]},
+    }
+    if not flag_settings:
+        return defaults.get(flag_num, {"enabled": True})
+
+    # Start with hardcoded defaults
+    cfg = dict(defaults.get(flag_num, {"enabled": True}))
+
+    # Merge global settings
+    global_cfg = flag_settings.get("global", {}).get(flag_num, {})
+    if global_cfg:
+        cfg.update(global_cfg)
+
+    # Merge group overrides
+    group_overrides = flag_settings.get("groups", {}).get(group, {})
+    group_cfg = group_overrides.get(flag_num, {})
+    if group_cfg:
+        cfg["enabled"] = group_cfg.get("enabled", cfg.get("enabled", True))
+        cfg.update(group_cfg.get("config", {}))
+
+    return cfg
+
+
+def run(corpay_file=None, baselines_file=None, output_file=None, flag_settings=None):
     """
     Run the full anomaly detection pipeline.
     All paths are optional — defaults to the standard data/ directory.
+    flag_settings: {global: {flag_num: {enabled, ...}}, groups: {group: {flag_num: {enabled, config}}}}
     Returns the report dict (also saves to output_file).
     """
     _corpay = corpay_file or DEFAULT_CORPAY_FILE
@@ -612,9 +663,7 @@ def run(corpay_file=None, baselines_file=None, output_file=None):
     # ── Compute vehicle-level period MPG (Flag 1) ──
     print("\nComputing vehicle-level period MPG...")
     mpg_results = compute_vehicle_period_mpg(fill_events, baselines)
-    flagged_vehicles = {v: d for v, d in mpg_results.items() if d["flagged"]}
     print(f"  {len(mpg_results)} vehicles analyzed")
-    print(f"  {len(flagged_vehicles)} vehicles flagged for low MPG")
 
     # ── Check odometer issues (Flag 3) ──
     print("  Checking odometer entries...")
@@ -657,7 +706,12 @@ def run(corpay_file=None, baselines_file=None, output_file=None):
 
     # Flag 5: High frequency fills
     print("  Checking high-frequency fills (Flag 5)...")
-    flag5_results = check_flag5_bulk(vehicle_txns)
+    f5_global = _resolve_flag_config("_global_", 5, flag_settings)
+    flag5_results = check_flag5_bulk(
+        vehicle_txns,
+        fill_count=f5_global.get("fill_count", 3),
+        window_hours=f5_global.get("window_hours", 24),
+    )
 
     # ── Assemble per-transaction flag results ──
     print("\nAssembling final report...")
@@ -673,6 +727,35 @@ def run(corpay_file=None, baselines_file=None, output_file=None):
     flagged_groups = defaultdict(set)
     all_records = []
 
+    # Re-evaluate Flag 1 (MPG) per group with settings
+    for vname, mpg_data in mpg_results.items():
+        # Find which group this vehicle belongs to
+        v_group = "Unassigned"
+        for item in vehicle_txns:
+            if item["vehicle"].get("name") == vname:
+                v_group = item["vehicle"].get("group_name", "Unassigned")
+                break
+        f1_cfg = _resolve_flag_config(v_group, 1, flag_settings)
+        if not f1_cfg.get("enabled", True):
+            mpg_data["flagged"] = False
+            mpg_data["reason"] = None
+            continue
+        threshold = f1_cfg.get("threshold_pct", 20)
+        baseline = mpg_data.get("baseline_mpg")
+        period_mpg = mpg_data.get("period_mpg")
+        if baseline and baseline > 0 and period_mpg is not None:
+            if period_mpg < baseline * (1 - threshold / 100):
+                mpg_data["flagged"] = True
+                pct = mpg_data.get("pct_diff", 0)
+                mpg_data["reason"] = (f"This vehicle averaged {period_mpg:.1f} MPG over "
+                    f"{mpg_data.get('total_miles', 0):,.0f} miles this period, which is "
+                    f"{abs(pct):.0f}% below the expected baseline of {baseline} MPG.")
+            else:
+                mpg_data["flagged"] = False
+                mpg_data["reason"] = None
+
+    flagged_vehicles = {v: d for v, d in mpg_results.items() if d["flagged"]}
+
     for item in vehicle_txns:
         row = item["row"]
         vehicle = item["vehicle"]
@@ -683,45 +766,56 @@ def run(corpay_file=None, baselines_file=None, output_file=None):
         flags_for_txn = []
 
         # Flag 3: Odometer issues (per-transaction)
-        odo_flag = txn_odo_flags.get(item_id)
-        if odo_flag:
-            flags_for_txn.append(odo_flag)
+        f3_cfg = _resolve_flag_config(group, 3, flag_settings)
+        if f3_cfg.get("enabled", True):
+            odo_flag = txn_odo_flags.get(item_id)
+            if odo_flag:
+                flags_for_txn.append(odo_flag)
 
         # Flag 2: Cost per gallon
-        f2 = check_flag2(row, fuel_type_medians)
-        if f2:
-            flags_for_txn.append(f2)
+        f2_cfg = _resolve_flag_config(group, 2, flag_settings)
+        if f2_cfg.get("enabled", True):
+            threshold_pct = f2_cfg.get("threshold_pct", 15)
+            f2 = check_flag2(row, fuel_type_medians, threshold_pct=threshold_pct)
+            if f2:
+                flags_for_txn.append(f2)
 
         # Flag 4: Small fill
-        # Skip when gallons == 1.0 and no odometer — Corpay defaults to 1 gal
-        # when mileage is not entered at the pump. Not a real fill amount.
-        event_gallons = safe_float(row.get("Unit/Gallons"))
-        odo_value = safe_float(row.get("Odometer"))
-        is_corpay_default = (event_gallons == 1.0 and not odo_value)
-        if not is_corpay_default:
-            f4 = check_flag4(event_gallons, vehicle_avg_fill, vname)
-            if f4:
-                flags_for_txn.append(f4)
+        f4_cfg = _resolve_flag_config(group, 4, flag_settings)
+        if f4_cfg.get("enabled", True):
+            event_gallons = safe_float(row.get("Unit/Gallons"))
+            odo_value = safe_float(row.get("Odometer"))
+            is_corpay_default = (event_gallons == 1.0 and not odo_value)
+            if not is_corpay_default:
+                threshold_pct = f4_cfg.get("threshold_pct", 25)
+                f4 = check_flag4(event_gallons, vehicle_avg_fill, vname, threshold_pct=threshold_pct)
+                if f4:
+                    flags_for_txn.append(f4)
 
         # Flag 5: High frequency
         driver = row.get("Spender") or row.get("Cardholder Full Name") or "Unknown"
-        dt = parse_datetime(row.get("Transaction Date - Date"), row.get("Transaction Date - Time"))
-        if dt:
-            dt_key = dt.strftime("%Y-%m-%d %H:%M")
-            for f5 in flag5_by_driver_dt.get((driver, dt_key), []):
-                flags_for_txn.append({
-                    "flag": 5,
-                    "flag_name": "High Frequency Fills",
-                    "reason": f5["reason"],
-                    "driver": driver,
-                    "fill_count": f5["fill_count"],
-                })
-                break  # one flag5 per transaction
+        f5_cfg = _resolve_flag_config(group, 5, flag_settings)
+        if f5_cfg.get("enabled", True):
+            dt = parse_datetime(row.get("Transaction Date - Date"), row.get("Transaction Date - Time"))
+            if dt:
+                dt_key = dt.strftime("%Y-%m-%d %H:%M")
+                for f5 in flag5_by_driver_dt.get((driver, dt_key), []):
+                    flags_for_txn.append({
+                        "flag": 5,
+                        "flag_name": "High Frequency Fills",
+                        "reason": f5["reason"],
+                        "driver": driver,
+                        "fill_count": f5["fill_count"],
+                    })
+                    break  # one flag5 per transaction
 
         # Flag 6: Wrong fuel type
-        f6 = check_flag6(row, vehicle)
-        if f6:
-            flags_for_txn.append(f6)
+        f6_cfg = _resolve_flag_config(group, 6, flag_settings)
+        if f6_cfg.get("enabled", True):
+            allowed = f6_cfg.get("allowed_fuel_types", ["Regular Unleaded"])
+            f6 = check_flag6(row, vehicle, allowed_fuel_types=allowed)
+            if f6:
+                flags_for_txn.append(f6)
 
         # Count flags
         for f in flags_for_txn:

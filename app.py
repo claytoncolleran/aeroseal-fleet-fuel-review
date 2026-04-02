@@ -685,6 +685,14 @@ def create_review():
                 r["completed_at"] = datetime.now().isoformat()
                 save_review_meta(r["period"], r)
 
+    # Load flag settings
+    flag_settings = None
+    if USE_DB:
+        flag_settings = {
+            "global": database.db_get_global_settings(),
+            "groups": database.db_get_all_group_overrides(),
+        }
+
     # Run anomaly detection
     output_path = os.path.join(review_dir, "anomaly_report.json")
     try:
@@ -694,6 +702,7 @@ def create_review():
             corpay_file=upload_path,
             baselines_file=BASELINES_FILE,
             output_file=output_path,
+            flag_settings=flag_settings,
         )
     except Exception as e:
         return jsonify({"status": "error", "message": f"Processing failed: {str(e)}"}), 500
@@ -963,6 +972,156 @@ def _notify_admins_all_complete(meta):
             )
         except Exception:
             pass
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# ADMIN: FLAG SETTINGS
+# ═══════════════════════════════════════════════════════════════════════════════
+
+@app.route("/admin/settings")
+@admin_required
+def admin_settings():
+    """Flag settings — global defaults + per-group overrides."""
+    report = load_report()
+    fleet_groups = sorted(report.get("group_summary", {}).keys())
+
+    if USE_DB:
+        global_settings = database.db_get_global_settings()
+        group_overrides = database.db_get_all_group_overrides()
+    else:
+        global_settings = dict(database.FLAG_DEFAULTS)
+        group_overrides = {}
+
+    active = get_active_review()
+    return render_template("admin_settings.html",
+                           fleet_groups=fleet_groups,
+                           global_settings=global_settings,
+                           group_overrides=group_overrides,
+                           flag_defaults=database.FLAG_DEFAULTS,
+                           active_review=active)
+
+
+@app.route("/api/settings/global", methods=["POST"])
+@admin_required
+def save_global_settings():
+    """Save global flag defaults."""
+    if not USE_DB:
+        return jsonify({"status": "error", "message": "Settings require database."}), 500
+
+    data = request.json
+    updated_by = session.get("email", "")
+    for flag_str, cfg in data.items():
+        flag_num = int(flag_str)
+        enabled = cfg.get("enabled", True)
+        config = {k: v for k, v in cfg.items() if k != "enabled"}
+        database.db_save_flag_setting(None, flag_num, enabled, config, updated_by)
+
+    return jsonify({"status": "ok"})
+
+
+@app.route("/api/settings/group/<group_name>", methods=["POST"])
+@admin_required
+def save_group_overrides(group_name):
+    """Save per-group flag overrides."""
+    if not USE_DB:
+        return jsonify({"status": "error", "message": "Settings require database."}), 500
+
+    data = request.json
+    updated_by = session.get("email", "")
+    for flag_str, cfg in data.items():
+        flag_num = int(flag_str)
+        if cfg is None:
+            # Remove override
+            database.db_delete_group_override(group_name, flag_num)
+        else:
+            enabled = cfg.get("enabled", True)
+            config = {k: v for k, v in cfg.items() if k != "enabled"}
+            database.db_save_flag_setting(group_name, flag_num, enabled, config, updated_by)
+
+    return jsonify({"status": "ok"})
+
+
+@app.route("/api/settings/group/<group_name>/<int:flag_number>", methods=["DELETE"])
+@admin_required
+def delete_group_override(group_name, flag_number):
+    """Remove a per-group override."""
+    if not USE_DB:
+        return jsonify({"status": "error", "message": "Settings require database."}), 500
+    database.db_delete_group_override(group_name, flag_number)
+    return jsonify({"status": "ok"})
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# ADMIN: REPROCESS REVIEW
+# ═══════════════════════════════════════════════════════════════════════════════
+
+@app.route("/api/reviews/<period>/reprocess", methods=["POST"])
+@admin_required
+def reprocess_review(period):
+    """Re-run anomaly detection on the existing upload with current flag settings."""
+    if USE_DB:
+        review_id = database.db_get_review_id(period)
+        if not review_id:
+            return jsonify({"status": "error", "message": "Review not found."}), 404
+    else:
+        meta = load_review_meta(period)
+        if not meta:
+            return jsonify({"status": "error", "message": "Review not found."}), 404
+
+    # Find the uploaded spreadsheet
+    review_dir = get_review_dir(period)
+    upload_path = os.path.join(review_dir, "corpay_upload.xlsx")
+    if not os.path.exists(upload_path):
+        return jsonify({"status": "error", "message": "No uploaded spreadsheet found for this period."}), 404
+
+    # Load flag settings
+    flag_settings = None
+    if USE_DB:
+        flag_settings = {
+            "global": database.db_get_global_settings(),
+            "groups": database.db_get_all_group_overrides(),
+        }
+
+    # Re-run anomaly detection
+    output_path = os.path.join(review_dir, "anomaly_report.json")
+    try:
+        sys.path.insert(0, TOOLS_DIR)
+        from anomaly_detection import run as run_anomaly
+        report = run_anomaly(
+            corpay_file=upload_path,
+            baselines_file=BASELINES_FILE,
+            output_file=output_path,
+            flag_settings=flag_settings,
+        )
+    except Exception as e:
+        return jsonify({"status": "error", "message": f"Reprocessing failed: {str(e)}"}), 500
+
+    # Update database with new results
+    if USE_DB and report:
+        all_txns = report.get("transactions", [])
+        temp_cards = report.get("temporary_cards", [])
+        declined = report.get("declined_transactions", [])
+
+        for t in all_txns:
+            t["card_type"] = "vehicle"
+        for t in temp_cards:
+            t["card_type"] = "temporary"
+            t["flag_count"] = 0
+            t["flags"] = []
+        for t in declined:
+            t["card_type"] = "declined"
+            t["flag_count"] = 0
+            t["flags"] = []
+
+        database.db_insert_transactions(review_id, all_txns + temp_cards + declined)
+
+        mpg_data = report.get("mpg_summary_by_vehicle", {})
+        if mpg_data:
+            database.db_insert_vehicle_mpg(review_id, mpg_data)
+
+        database.db_update_review(period, processed_at=datetime.now())
+
+    return jsonify({"status": "ok", "summary": report.get("summary", {}) if report else {}})
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

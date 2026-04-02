@@ -343,6 +343,7 @@
         <a href="/admin" class="{% if request.path == '/admin' %}active{% endif %}">Admin</a>
         <a href="/admin/reviews" class="{% if '/reviews' in request.path %}active{% endif %}">Reviews</a>
         <a href="/admin/users" class="{% if '/users' in request.path %}active{% endif %}">Users</a>
+        <a href="/admin/settings" class="{% if '/settings' in request.path %}active{% endif %}">Settings</a>
         {% endif %}
         {% if current_user %}
         <span style="font-size: 13px; color: #5A6B7B; padding: 6px 8px;">{{ current_user.display_name }}</span>
