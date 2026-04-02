@@ -43,7 +43,12 @@ def get_review_dir(period):
 
 
 def load_review_meta(period):
-    """Load meta.json for a review period."""
+    """Load review metadata for a period. Checks database first, then JSON file."""
+    if USE_DB:
+        meta = database.db_get_review(period)
+        if meta:
+            return meta
+
     meta_path = os.path.join(get_review_dir(period), "meta.json")
     if os.path.exists(meta_path):
         with open(meta_path) as f:
@@ -642,55 +647,6 @@ def admin_reviews():
                            reviews=reviews,
                            active=active,
                            progress=progress)
-
-
-@app.route("/api/debug/report")
-@admin_required
-def debug_report():
-    """Temporary diagnostic endpoint — remove after confirming fix."""
-    active = get_active_review()
-    if not active:
-        return jsonify({"error": "no active review"})
-    period = active["period"]
-    result = {"active_review": active, "USE_DB": USE_DB, "PERSIST_DIR": PERSIST_DIR}
-
-    # Check JSON file
-    report_path = os.path.join(get_review_dir(period), "anomaly_report.json")
-    result["json_file_exists"] = os.path.exists(report_path)
-
-    # Check DB
-    if USE_DB:
-        try:
-            review_id = database.db_get_review_id(period)
-            result["db_review_id"] = review_id
-            if review_id:
-                with database.get_db() as conn:
-                    cur = conn.cursor()
-                    cur.execute("SELECT COUNT(*) FROM transactions WHERE review_id = %s", (review_id,))
-                    result["db_transaction_count"] = cur.fetchone()[0]
-                    cur.execute("SELECT COUNT(*) FROM flags WHERE transaction_id IN (SELECT id FROM transactions WHERE review_id = %s)", (review_id,))
-                    result["db_flag_count"] = cur.fetchone()[0]
-                    cur.execute("SELECT COUNT(*) FROM vehicle_mpg WHERE review_id = %s", (review_id,))
-                    result["db_mpg_count"] = cur.fetchone()[0]
-            # Try building report
-            report = database.db_build_report(period)
-            if report:
-                result["db_report_groups"] = list(report.get("group_summary", {}).keys())
-                result["db_report_txn_count"] = len(report.get("transactions", []))
-            else:
-                result["db_report"] = None
-        except Exception as e:
-            result["db_error"] = str(e)
-
-    # Try load_report
-    try:
-        report = load_report(period)
-        result["load_report_groups"] = list(report.get("group_summary", {}).keys())
-        result["load_report_txn_count"] = len(report.get("transactions", []))
-    except Exception as e:
-        result["load_report_error"] = str(e)
-
-    return jsonify(result)
 
 
 @app.route("/api/reviews/create", methods=["POST"])

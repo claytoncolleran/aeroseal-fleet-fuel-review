@@ -80,7 +80,8 @@
         <td style="font-size: 12px; color: #5A6B7B;">{{ (user.get('created_at', '')[:10]) }}</td>
         <td>
           {% if username != current_user.email %}
-            <button class="btn btn-sm" style="font-size: 11px; padding: 4px 12px; background: transparent; color: var(--aeroseal-sapphire); border: 1px solid var(--aeroseal-sapphire); border-radius: 4px; cursor: pointer;" onclick="resetPassword('{{ username }}')">Reset Password</button>
+            <button class="btn btn-sm" style="font-size: 11px; padding: 4px 12px; background: transparent; color: var(--aeroseal-steel-blue); border: 1px solid var(--aeroseal-steel-blue); border-radius: 4px; cursor: pointer;" onclick="openEditModal('{{ username }}', '{{ user.get('display_name', '') }}', '{{ user.get('role', 'manager') }}', '{{ user.get('fleet_group', '') }}')">Edit</button>
+            <button class="btn btn-sm" style="font-size: 11px; padding: 4px 12px; background: transparent; color: var(--aeroseal-sapphire); border: 1px solid var(--aeroseal-sapphire); border-radius: 4px; cursor: pointer; margin-left: 4px;" onclick="resetPassword('{{ username }}')">Reset Password</button>
             <button class="btn btn-sm" style="font-size: 11px; padding: 4px 12px; background: transparent; color: #C62828; border: 1px solid #C62828; border-radius: 4px; cursor: pointer; margin-left: 4px;" onclick="deleteUser('{{ username }}')">Delete</button>
           {% else %}
             <span style="font-size: 12px; color: #999;">Current user</span>
@@ -90,6 +91,44 @@
       {% endfor %}
     </tbody>
   </table>
+</div>
+<!-- Edit User Modal -->
+<div id="edit-modal" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.4); z-index:1000; align-items:center; justify-content:center;">
+  <div style="background:#fff; border-radius:12px; padding:28px 32px; max-width:480px; width:90%; box-shadow:0 8px 32px rgba(0,0,0,0.18);">
+    <h3 style="font-size:16px; font-weight:700; color:var(--aeroseal-steel-blue); margin:0 0 20px;">Edit User</h3>
+    <div id="edit-error" class="section-banner banner-warn" style="display:none; margin-bottom:12px;"></div>
+    <input type="hidden" id="edit-email-key">
+    <div style="margin-bottom:12px;">
+      <label class="form-label" style="display:block; font-size:12px; font-weight:600; color:var(--aeroseal-midnight-blue); margin-bottom:4px;">Email</label>
+      <input type="text" id="edit-email-display" disabled style="font-size:14px; padding:10px 12px; border:1px solid var(--aeroseal-titanium); border-radius:6px; width:100%; background:#f5f5f5; color:#666;">
+    </div>
+    <div style="margin-bottom:12px;">
+      <label class="form-label" style="display:block; font-size:12px; font-weight:600; color:var(--aeroseal-midnight-blue); margin-bottom:4px;">Display Name</label>
+      <input type="text" id="edit-display" style="font-size:14px; padding:10px 12px; border:1px solid var(--aeroseal-titanium); border-radius:6px; width:100%;">
+    </div>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:20px;">
+      <div>
+        <label class="form-label" style="display:block; font-size:12px; font-weight:600; color:var(--aeroseal-midnight-blue); margin-bottom:4px;">Role</label>
+        <select id="edit-role" style="font-family:var(--font-primary); font-size:14px; padding:10px 12px; border:1px solid var(--aeroseal-titanium); border-radius:6px; width:100%; background:#fff;" onchange="toggleEditGroup()">
+          <option value="manager">Fleet Manager</option>
+          <option value="admin">Administrator</option>
+        </select>
+      </div>
+      <div id="edit-group-wrap">
+        <label class="form-label" style="display:block; font-size:12px; font-weight:600; color:var(--aeroseal-midnight-blue); margin-bottom:4px;">Fleet Group</label>
+        <select id="edit-group" style="font-family:var(--font-primary); font-size:14px; padding:10px 12px; border:1px solid var(--aeroseal-titanium); border-radius:6px; width:100%; background:#fff;">
+          <option value="">Select group...</option>
+          {% for g in fleet_groups %}
+          <option value="{{ g }}">{{ g }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+    <div style="display:flex; justify-content:flex-end; gap:8px;">
+      <button style="padding:10px 20px; font-size:14px; border:1px solid var(--aeroseal-titanium); border-radius:6px; background:#fff; color:var(--aeroseal-midnight-blue); cursor:pointer;" onclick="closeEditModal()">Cancel</button>
+      <button class="btn btn-approve" style="padding:10px 20px; font-size:14px;" onclick="saveEdit()">Save Changes</button>
+    </div>
+  </div>
 </div>
 {% endblock %}
 
@@ -151,6 +190,60 @@ function resetPassword(username) {
     }
   });
 }
+
+function openEditModal(email, displayName, role, fleetGroup) {
+  document.getElementById('edit-email-key').value = email;
+  document.getElementById('edit-email-display').value = email;
+  document.getElementById('edit-display').value = displayName;
+  document.getElementById('edit-role').value = role;
+  document.getElementById('edit-group').value = fleetGroup || '';
+  toggleEditGroup();
+  document.getElementById('edit-modal').style.display = 'flex';
+}
+
+function closeEditModal() {
+  document.getElementById('edit-modal').style.display = 'none';
+  document.getElementById('edit-error').style.display = 'none';
+}
+
+function toggleEditGroup() {
+  const role = document.getElementById('edit-role').value;
+  document.getElementById('edit-group-wrap').style.display = role === 'manager' ? 'block' : 'none';
+}
+
+function saveEdit() {
+  const email = document.getElementById('edit-email-key').value;
+  const data = {
+    display_name: document.getElementById('edit-display').value.trim(),
+    role: document.getElementById('edit-role').value,
+    fleet_group: document.getElementById('edit-role').value === 'manager'
+      ? document.getElementById('edit-group').value : '',
+  };
+
+  fetch('/api/users/' + encodeURIComponent(email), {
+    method: 'PUT',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(data)
+  }).then(r => r.json()).then(resp => {
+    if (resp.status === 'ok') {
+      closeEditModal();
+      location.reload();
+    } else {
+      const el = document.getElementById('edit-error');
+      el.textContent = resp.message || 'Failed to update user.';
+      el.style.display = 'block';
+    }
+  }).catch(() => {
+    const el = document.getElementById('edit-error');
+    el.textContent = 'Request failed.';
+    el.style.display = 'block';
+  });
+}
+
+// Close modal on backdrop click
+document.getElementById('edit-modal').addEventListener('click', function(e) {
+  if (e.target === this) closeEditModal();
+});
 
 function deleteUser(username) {
   if (!confirm('Delete user "' + username + '"? This cannot be undone.')) return;
