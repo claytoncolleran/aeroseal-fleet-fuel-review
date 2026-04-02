@@ -24,12 +24,23 @@ def load_corpay(corpay_file=None):
     wb = openpyxl.load_workbook(corpay_file or DEFAULT_CORPAY_FILE, read_only=True)
     ws = wb.active
     rows = list(ws.iter_rows(values_only=True))
-    headers = rows[0]
+    wb.close()
+
+    # Auto-detect header row: Corpay exports may have metadata rows before
+    # the actual column headers. Look for the row containing known columns.
+    header_idx = 0
+    known_cols = {"Transaction Date - Date", "Cardholder Full Name", "Vendor", "Sub Account"}
+    for i, row in enumerate(rows):
+        row_vals = {str(c).strip() for c in row if c is not None}
+        if known_cols & row_vals:
+            header_idx = i
+            break
+
+    headers = rows[header_idx]
     data = []
-    for r in rows[1:]:
+    for r in rows[header_idx + 1:]:
         row = dict(zip(headers, r))
         data.append(row)
-    wb.close()
     return data
 
 
