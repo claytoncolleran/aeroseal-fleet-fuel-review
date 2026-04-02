@@ -150,7 +150,7 @@
     </div>
     <div style="display: flex; gap: 10px; align-items: center;">
       <input type="text" id="admin-name" class="admin-input" placeholder="Fleet Admin Name">
-      <button class="btn btn-primary" onclick="adminApprove()">Acknowledge &amp; Sign</button>
+      <button class="btn btn-primary" onclick="adminApprove(this)">Acknowledge &amp; Sign</button>
       <button class="btn btn-outline" onclick="window.print()">Download PDF</button>
     </div>
   </div>
@@ -307,22 +307,29 @@
 </div>
 
 <script>
-function adminApprove() {
+function adminApprove(btn) {
   const name = document.getElementById('admin-name').value.trim();
   if (!name) { alert('Please enter your name.'); return; }
 
+  btn.disabled = true;
+  btn.textContent = 'Saving...';
   fetch('/api/admin-approve', {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
     body: JSON.stringify({admin_name: name})
-  }).then(r => r.json()).then(() => {
+  }).then(r => {
+    if (!r.ok) throw new Error('Server error');
+    return r.json();
+  }).then(() => {
     document.getElementById('sig-admin-name').textContent = name;
     document.getElementById('sig-date').textContent = new Date().toLocaleDateString();
     document.getElementById('admin-name').disabled = true;
-    const btn = event.target;
     btn.textContent = 'Acknowledged';
     btn.style.background = '#2E7D32';
-    btn.disabled = true;
+  }).catch(() => {
+    btn.disabled = false;
+    btn.textContent = 'Acknowledge & Sign';
+    alert('Failed to save approval. Please try again.');
   });
 }
 </script>

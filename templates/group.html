@@ -310,7 +310,10 @@ function submitDecision(btn, txnKey, action, reason='') {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
     body: JSON.stringify({group_name: GROUP_NAME, txn_key: txnKey, action: action, reason: reason})
-  }).then(r => r.json()).then(data => {
+  }).then(r => {
+    if (!r.ok) throw new Error('Server error');
+    return r.json();
+  }).then(data => {
     const row = btn.closest('.decision-row');
     if (action === 'approve') {
       row.innerHTML = '<span class="decision-status decision-approved">Acknowledged</span>';
@@ -319,7 +322,7 @@ function submitDecision(btn, txnKey, action, reason='') {
     }
     reviewed++;
     updateProgress();
-  });
+  }).catch(() => alert('Failed to save decision. Please try again.'));
 }
 
 function showDenyReason(btn, txnKey) {
@@ -337,14 +340,23 @@ function submitDeny(input, txnKey) {
 function submitGroup() {
   const name = document.getElementById('manager-name').value.trim();
   if (!name) return;
+  const btn = document.getElementById('submit-btn');
+  btn.disabled = true;
+  btn.textContent = 'Submitting...';
   fetch('/api/submit-group', {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
     body: JSON.stringify({group_name: GROUP_NAME, manager_name: name})
-  }).then(r => r.json()).then(data => {
-    document.getElementById('submit-btn').textContent = 'Submitted';
-    document.getElementById('submit-btn').disabled = true;
-    document.getElementById('submit-btn').style.background = '#2E7D32';
+  }).then(r => {
+    if (!r.ok) throw new Error('Server error');
+    return r.json();
+  }).then(data => {
+    btn.textContent = 'Submitted';
+    btn.style.background = '#2E7D32';
+  }).catch(() => {
+    btn.disabled = false;
+    btn.textContent = 'Submit Review';
+    alert('Failed to submit review. Please try again.');
   });
 }
 </script>

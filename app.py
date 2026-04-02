@@ -270,8 +270,11 @@ def login():
         email = request.form.get("email", "").strip().lower()
         password = request.form.get("password", "")
 
-        users = load_users()
-        user = users.get(email)
+        if USE_DB:
+            user = database.db_get_user(email)
+        else:
+            users = load_users()
+            user = users.get(email)
 
         if user and check_password_hash(user["password_hash"], password):
             session["email"] = email
@@ -483,7 +486,7 @@ def submit_group():
             submitted_groups = {g for g in all_groups
                                 if all_decisions.get(g, {}).get("_submission")}
             if all_groups and submitted_groups == all_groups:
-                _notify_admins_all_complete(active)
+                _notify_admins_all_complete(active, request.host_url.rstrip("/"))
         except Exception:
             pass  # Don't fail the submission if notification fails
 
@@ -977,14 +980,15 @@ def _build_reminder_html(name, meta, review_url):
     """
 
 
-def _notify_admins_all_complete(meta):
+def _notify_admins_all_complete(meta, app_url=None):
     """Send email to all admin users that all fleet managers have submitted."""
     resend_key = os.environ.get("RESEND_API_KEY")
     if not resend_key:
         return
 
     from_email = os.environ.get("FROM_EMAIL", "notifications@aeroseal.com")
-    app_url = os.environ.get("APP_URL", "https://aeroseal-fleet-fuel-review.onrender.com")
+    if not app_url:
+        app_url = os.environ.get("APP_URL", "https://aeroseal-fleet-fuel-review.onrender.com")
     report_url = f"{app_url}/admin/report"
     label = meta.get("label", meta.get("period", ""))
 
