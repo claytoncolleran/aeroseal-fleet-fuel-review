@@ -810,7 +810,7 @@ def send_notifications(period):
         return jsonify({"status": "error",
                         "message": "RESEND_API_KEY not configured. Set it in Render environment variables."}), 500
 
-    from_email = os.environ.get("FROM_EMAIL", "fleet@aeroseal.com")
+    from_email = os.environ.get("FROM_EMAIL", "notifications@aeroseal.com")
     app_url = request.host_url.rstrip("/")
 
     sent = 0
@@ -884,7 +884,7 @@ def send_reminders(period):
     if not sendgrid_key:
         return jsonify({"status": "error", "message": "RESEND_API_KEY not configured."}), 500
 
-    from_email = os.environ.get("FROM_EMAIL", "fleet@aeroseal.com")
+    from_email = os.environ.get("FROM_EMAIL", "notifications@aeroseal.com")
     app_url = request.host_url.rstrip("/")
 
     sent = 0

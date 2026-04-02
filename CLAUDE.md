@@ -63,9 +63,9 @@ Tables: `users`, `reviews`, `transactions`, `flags`, `vehicle_mpg`, `decisions`,
 
 ## Email Notifications
 - **Provider:** Resend (resend.com) — HTTP API, no SDK dependency
-- **Sending domain:** `aeroseal.app` (verified in Resend)
-- **From address:** `noreply@aeroseal.app`
-- **Note:** Aeroseal.com (Microsoft 365) may quarantine emails from aeroseal.app — domain needs to be whitelisted as safe sender in M365 admin
+- **Sending domain:** `aeroseal.com` (verified in Resend)
+- **From address:** `notifications@aeroseal.com`
+- **Note:** Sending via Resend from aeroseal.com — ensure DNS records (SPF, DKIM) are configured in Resend so emails pass authentication
 - **Notification types:** initial review ready, reminders for pending managers, admin notification when all managers have submitted
 
 ## Credentials & Environment Variables
@@ -81,7 +81,7 @@ Tables: `users`, `reviews`, `transactions`, `flags`, `vehicle_mpg`, `decisions`,
 | `ADMIN_DEFAULT_EMAIL` | Default admin account email (e.g., `clayton.colleran@aeroseal.com`) |
 | `ADMIN_DEFAULT_PASSWORD` | Default admin password (change after first login) |
 | `RESEND_API_KEY` | Resend email API key (starts with `re_`) |
-| `FROM_EMAIL` | Sending address (e.g., `noreply@aeroseal.app`) |
+| `FROM_EMAIL` | Sending address (e.g., `notifications@aeroseal.com`) |
 | `DATABASE_URL` | PostgreSQL connection string (auto-set by Render from linked database) |
 
 ## Anomaly Flags
@@ -155,4 +155,4 @@ All core phases complete. System is deployed and operational.
 - Acknowledge/Comment terminology (replaced Approve/Deny): COMPLETE
 - Auto-notify admins when all managers submit: COMPLETE
 - Delete review functionality: COMPLETE
-- Known issue: aeroseal.com (M365) quarantines emails from aeroseal.app — safe sender request submitted
+- Sending domain: aeroseal.com via Resend (previously aeroseal.app)
