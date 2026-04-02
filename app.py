@@ -219,6 +219,8 @@ def login_required(f):
     def decorated(*args, **kwargs):
         if "email" not in session:
             return redirect(url_for("login"))
+        if session.get("must_change_password"):
+            return redirect(url_for("change_password"))
         return f(*args, **kwargs)
     return decorated
 
@@ -276,7 +278,10 @@ def login():
             session["role"] = user["role"]
             session["display_name"] = user.get("display_name", email)
             session["fleet_group"] = user.get("fleet_group")
+            session["must_change_password"] = user.get("must_change_password", False)
             session.permanent = True
+            if session["must_change_password"]:
+                return redirect(url_for("change_password"))
             return redirect(url_for("index"))
         else:
             flash("Invalid email or password.", "error")
@@ -288,6 +293,43 @@ def login():
 def logout():
     session.clear()
     return redirect(url_for("login"))
+
+
+@app.route("/change-password", methods=["GET", "POST"])
+def change_password():
+    """Force password change on first login."""
+    if "email" not in session:
+        return redirect(url_for("login"))
+
+    if request.method == "POST":
+        new_password = request.form.get("new_password", "")
+        confirm_password = request.form.get("confirm_password", "")
+
+        if not new_password or len(new_password) < 6:
+            flash("Password must be at least 6 characters.", "error")
+            return render_template("change_password.html")
+
+        if new_password != confirm_password:
+            flash("Passwords do not match.", "error")
+            return render_template("change_password.html")
+
+        email = session["email"]
+        pw_hash = generate_password_hash(new_password, method="pbkdf2:sha256")
+
+        if USE_DB:
+            database.db_update_user(email, password_hash=pw_hash, must_change_password=False)
+        else:
+            users = load_users()
+            if email in users:
+                users[email]["password_hash"] = pw_hash
+                users[email]["must_change_password"] = False
+                save_users(users)
+
+        session["must_change_password"] = False
+        flash("Password updated successfully.", "success")
+        return redirect(url_for("index"))
+
+    return render_template("change_password.html")
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -1190,6 +1232,7 @@ def update_user(username):
             kwargs["fleet_group"] = data["fleet_group"]
         if data.get("password"):
             kwargs["password_hash"] = generate_password_hash(data["password"], method="pbkdf2:sha256")
+            kwargs["must_change_password"] = True
         database.db_update_user(username, **kwargs)
     else:
         users = load_users()
@@ -1204,6 +1247,7 @@ def update_user(username):
             user["fleet_group"] = data["fleet_group"] if user["role"] == "manager" else None
         if data.get("password"):
             user["password_hash"] = generate_password_hash(data["password"], method="pbkdf2:sha256")
+            user["must_change_password"] = True
         user["updated_at"] = datetime.now().isoformat()
         user["updated_by"] = session.get("email", "")
         save_users(users)
