@@ -66,7 +66,6 @@
         {% if active.notifications_sent_at %}Resend Notifications{% else %}Send Notifications{% endif %}
       </button>
       <button class="btn btn-deny" style="padding: 8px 20px; font-size: 13px; background: transparent; color: #E65100; border: 1.5px solid #E65100;" onclick="sendReminders('{{ active.period }}')">Send Reminders</button>
-      <button class="btn" style="padding: 8px 20px; font-size: 13px; background: var(--aeroseal-citrus-green); color: var(--aeroseal-midnight-blue); border: none; border-radius: 6px; cursor: pointer; font-weight: 600;" onclick="reprocessReview('{{ active.period }}')">Reprocess</button>
       <button class="btn" style="padding: 8px 20px; font-size: 13px; background: transparent; color: #C62828; border: 1.5px solid #C62828; border-radius: 6px; cursor: pointer;" onclick="deleteReview('{{ active.period }}')">Delete Review</button>
     </div>
   </div>
@@ -200,27 +199,6 @@ function deleteReview(period) {
         location.reload();
       } else {
         alert(resp.message || 'Failed to delete.');
-      }
-    });
-}
-
-function reprocessReview(period) {
-  if (!confirm('Reprocess this review with current flag settings? Existing manager decisions will be preserved.')) return;
-  const status = document.getElementById('notify-status');
-  status.textContent = 'Reprocessing with current flag settings...';
-  status.style.color = '#5A6B7B';
-
-  fetch('/api/reviews/' + period + '/reprocess', { method: 'POST' })
-    .then(r => r.json())
-    .then(resp => {
-      if (resp.status === 'ok') {
-        const s = resp.summary || {};
-        status.innerHTML = '<span style="color: #2E7D32; font-weight: 600;">Reprocessing complete.</span> ' +
-          (s.total_vehicle_transactions_analyzed || 0) + ' transactions, ' +
-          (s.total_flagged_transactions || 0) + ' flagged. <a href="/">View Dashboard</a>';
-      } else {
-        status.textContent = resp.message || 'Reprocessing failed.';
-        status.style.color = '#C62828';
       }
     });
 }
