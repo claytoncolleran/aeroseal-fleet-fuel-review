@@ -55,7 +55,7 @@
       display: flex; align-items: center; gap: 12px;
       font-weight: 700; font-size: 18px; color: var(--aeroseal-steel-blue);
     }
-    .header-brand svg { width: 24px; height: 24px; }
+    .header-brand img { width: 28px; height: 28px; }
     .header-nav { display: flex; gap: 8px; }
     .header-nav a {
       font-weight: 500; font-size: 14px;
@@ -334,7 +334,7 @@
   <header class="header">
     <div class="header-inner">
       <div class="header-brand">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#005A90" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 22V5a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v17"/><path d="M3 22h10"/><path d="M13 10h2a2 2 0 0 1 2 2v4a2 2 0 0 0 2 2 2 2 0 0 0 2-2V9.83a2 2 0 0 0-.59-1.42L18 6"/><path d="M6 12h4"/><path d="M6 8h4"/></svg>
+        <img src="{{ url_for('static', filename='favicon.png') }}" alt="Aeroseal">
         Aeroseal Fuel Review
       </div>
       <nav class="header-nav">
