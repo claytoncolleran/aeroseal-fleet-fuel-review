@@ -84,7 +84,8 @@ def get_active_review():
 
 
 def load_report(period=None):
-    """Load anomaly_report.json for a period (defaults to active review)."""
+    """Load anomaly report for a period (defaults to active review).
+    Tries database first when USE_DB is True, falls back to JSON file."""
     empty_report = {"transactions": [], "temporary_cards": [], "declined_transactions": [],
                      "group_summary": {}, "summary": {}, "mpg_summary_by_vehicle": {}}
     if not period:
@@ -93,12 +94,18 @@ def load_report(period=None):
             return empty_report
         period = active["period"]
 
+    # Try database first
+    if USE_DB:
+        report = database.db_build_report(period)
+        if report:
+            return report
+
+    # Fall back to JSON file on disk
     report_path = os.path.join(get_review_dir(period), "anomaly_report.json")
     if os.path.exists(report_path):
         with open(report_path) as f:
             return json.load(f)
-    return {"transactions": [], "temporary_cards": [], "declined_transactions": [],
-            "group_summary": {}, "summary": {}, "mpg_summary_by_vehicle": {}}
+    return empty_report
 
 
 def load_decisions(period=None):

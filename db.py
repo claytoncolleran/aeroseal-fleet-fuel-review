@@ -511,6 +511,167 @@ def db_save_group_submission(review_id, fleet_group, manager_name, submitted_by)
         )
 
 
+def db_build_report(period):
+    """Reconstruct the full anomaly report from database tables."""
+    review = db_get_review(period)
+    if not review:
+        return None
+    review_id = review["id"]
+
+    with get_db() as conn:
+        cur = conn.cursor()
+
+        # ── Transactions with flags ──────────────────────────────────────────
+        cur.execute(
+            """SELECT id, transaction_date, transaction_time, vehicle_name, fleet_group,
+                      driver, vendor, location, state, status, gallons, gross_price, net_price,
+                      gross_ppg, product, odometer, card_no, sub_account, card_type, flag_count
+               FROM transactions WHERE review_id = %s ORDER BY id""",
+            (review_id,)
+        )
+        txn_rows = cur.fetchall()
+
+        # Fetch all flags for this review in one query
+        cur.execute(
+            """SELECT f.transaction_id, f.flag_number, f.flag_name, f.reason
+               FROM flags f JOIN transactions t ON f.transaction_id = t.id
+               WHERE t.review_id = %s ORDER BY f.transaction_id, f.flag_number""",
+            (review_id,)
+        )
+        flags_by_txn = {}
+        for row in cur.fetchall():
+            flags_by_txn.setdefault(row[0], []).append({
+                "flag": row[1], "flag_name": row[2], "reason": row[3]
+            })
+
+        transactions = []
+        temporary_cards = []
+        declined_transactions = []
+
+        for row in txn_rows:
+            txn_id = row[0]
+            txn = {
+                "transaction_date": str(row[1]) if row[1] else None,
+                "transaction_time": str(row[2]) if row[2] else None,
+                "vehicle_name": row[3],
+                "fleet_group": row[4],
+                "driver": row[5],
+                "vendor": row[6],
+                "location": row[7],
+                "state": row[8],
+                "status": row[9],
+                "gallons": float(row[10]) if row[10] is not None else None,
+                "gross_price": float(row[11]) if row[11] is not None else None,
+                "net_price": float(row[12]) if row[12] is not None else None,
+                "gross_ppg": float(row[13]) if row[13] is not None else None,
+                "product": row[14],
+                "odometer": float(row[15]) if row[15] is not None else None,
+                "card_no": row[16],
+                "sub_account": row[17],
+                "flags": flags_by_txn.get(txn_id, []),
+                "flag_count": row[19] or 0,
+            }
+            card_type = row[18] or "vehicle"
+            if card_type == "temporary":
+                temporary_cards.append(txn)
+            elif card_type == "declined":
+                declined_transactions.append(txn)
+            else:
+                transactions.append(txn)
+
+        # ── Vehicle MPG summary ──────────────────────────────────────────────
+        cur.execute(
+            """SELECT vehicle_name, period_mpg, baseline_mpg, total_miles, total_gallons,
+                      fill_count, pct_diff, flagged, reason, needs_review
+               FROM vehicle_mpg WHERE review_id = %s""",
+            (review_id,)
+        )
+        mpg_summary = {}
+        for row in cur.fetchall():
+            mpg_summary[row[0]] = {
+                "period_mpg": float(row[1]) if row[1] is not None else None,
+                "baseline_mpg": float(row[2]) if row[2] is not None else None,
+                "total_miles": int(row[3]) if row[3] is not None else None,
+                "total_gallons": float(row[4]) if row[4] is not None else None,
+                "fill_count": int(row[5]) if row[5] is not None else None,
+                "pct_diff": float(row[6]) if row[6] is not None else None,
+                "flagged": row[7] or False,
+                "reason": row[8],
+            }
+
+        # ── Build group_summary ──────────────────────────────────────────────
+        group_summary = {}
+        for txn in transactions:
+            g = txn.get("fleet_group")
+            if not g:
+                continue
+            if g not in group_summary:
+                group_summary[g] = {
+                    "total_txns": 0, "flagged_txns": 0,
+                    "total_spend": 0.0, "flag_types": set(),
+                    "vehicles_flagged_mpg": [],
+                }
+            gs = group_summary[g]
+            gs["total_txns"] += 1
+            if txn["flag_count"] > 0:
+                gs["flagged_txns"] += 1
+            gs["total_spend"] += txn.get("net_price") or txn.get("gross_price") or 0.0
+            for flag in txn.get("flags", []):
+                gs["flag_types"].add(flag.get("flag"))
+
+        # Add MPG-flagged vehicles to their groups
+        for vname, m in mpg_summary.items():
+            if m.get("flagged"):
+                # Find which group this vehicle belongs to
+                for txn in transactions:
+                    if txn["vehicle_name"] == vname:
+                        g = txn.get("fleet_group")
+                        if g and g in group_summary:
+                            if vname not in group_summary[g]["vehicles_flagged_mpg"]:
+                                group_summary[g]["vehicles_flagged_mpg"].append(vname)
+                        break
+
+        # Convert sets to sorted lists for JSON serialization
+        for gs in group_summary.values():
+            gs["flag_types"] = sorted(gs["flag_types"])
+            gs["total_spend"] = round(gs["total_spend"], 2)
+
+        # ── Build summary ────────────────────────────────────────────────────
+        total_flags = sum(t["flag_count"] for t in transactions)
+        flags_by_type = {}
+        flag_names = {
+            1: "flag_1_fuel_efficiency_vehicle_level",
+            2: "flag_2_cost_per_gallon_outlier",
+            3: "flag_3_odometer_issue",
+            4: "flag_4_unusually_small_fill",
+            5: "flag_5_high_frequency_fills",
+            6: "flag_6_wrong_fuel_type",
+        }
+        for txn in transactions:
+            for flag in txn.get("flags", []):
+                key = flag_names.get(flag.get("flag"), f"flag_{flag.get('flag')}_unknown")
+                flags_by_type[key] = flags_by_type.get(key, 0) + 1
+
+        summary = {
+            "total_vehicle_transactions_analyzed": len(transactions),
+            "total_flagged_transactions": sum(1 for t in transactions if t["flag_count"] > 0),
+            "total_flags": total_flags,
+            "flags_by_type": flags_by_type,
+            "vehicles_flagged_for_mpg": [v for v, m in mpg_summary.items() if m.get("flagged")],
+            "temporary_card_transactions": len(temporary_cards),
+            "declined_transactions": len(declined_transactions),
+        }
+
+        return {
+            "summary": summary,
+            "group_summary": group_summary,
+            "transactions": transactions,
+            "temporary_cards": temporary_cards,
+            "declined_transactions": declined_transactions,
+            "mpg_summary_by_vehicle": mpg_summary,
+        }
+
+
 def db_save_admin_approval(review_id, admin_name, approved_by):
     with get_db() as conn:
         cur = conn.cursor()
