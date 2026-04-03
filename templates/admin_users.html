@@ -257,7 +257,7 @@ function deleteUser(email) {
     headers: {'Content-Type': 'application/json'}
   }).then(r => r.json()).then(resp => {
     if (resp.status === 'ok') {
-      document.getElementById('user-row-' + email).remove();
+      location.reload();
     } else {
       alert(resp.message || 'Failed to delete user.');
     }

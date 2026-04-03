@@ -72,6 +72,9 @@ def init_db():
             ALTER TABLE users DROP COLUMN IF EXISTS must_change_password;
             -- Allow NULL password_hash for invited users who haven't set a password yet
             ALTER TABLE users ALTER COLUMN password_hash DROP NOT NULL;
+            -- Ensure invite tokens are unique (partial index, ignores NULLs)
+            CREATE UNIQUE INDEX IF NOT EXISTS uq_invite_token
+                ON users (invite_token) WHERE invite_token IS NOT NULL;
 
             CREATE TABLE IF NOT EXISTS reviews (
                 id SERIAL PRIMARY KEY,
