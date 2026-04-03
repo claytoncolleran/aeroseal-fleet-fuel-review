@@ -12,13 +12,13 @@
 
 <!-- Global Defaults -->
 <div class="card" style="padding: 24px; margin-bottom: 24px;">
-  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 8px;">
     <h2 style="font-size: 16px; font-weight: 700; color: var(--aeroseal-steel-blue);">Global Defaults</h2>
     <button class="btn btn-approve" style="padding: 8px 20px; font-size: 13px;" onclick="saveGlobals()">Save Defaults</button>
   </div>
   <p style="font-size: 13px; color: #5A6B7B; margin-bottom: 16px;">These thresholds apply to all fleet groups unless overridden below.</p>
 
-  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+  <div class="flag-settings-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
     {% for flag_num in [1,2,3,4,5,6] %}
     {% set cfg = global_settings.get(flag_num, flag_defaults.get(flag_num, {})) %}
     <div class="flag-setting-card" style="border: 1px solid var(--aeroseal-titanium); border-radius: 8px; padding: 16px;">
@@ -109,7 +109,7 @@
       <button class="btn btn-approve" style="padding: 8px 20px; font-size: 13px;" onclick="saveGroupOverrides()">Save Overrides</button>
     </div>
 
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+    <div class="flag-settings-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
       {% for flag_num in [1,2,3,4,5,6] %}
       <div class="flag-setting-card" id="group-flag-{{ flag_num }}" style="border: 1px solid var(--aeroseal-titanium); border-radius: 8px; padding: 16px; position: relative;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">

@@ -12,7 +12,7 @@
   <h2 style="font-size: 16px; font-weight: 700; color: var(--aeroseal-steel-blue); margin-bottom: 16px;">Invite New User</h2>
   <div id="create-error" class="section-banner banner-warn" style="display: none; margin-bottom: 12px;"></div>
   <div id="create-success" class="section-banner banner-info" style="display: none; margin-bottom: 12px;"></div>
-  <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr auto; gap: 12px; align-items: end;">
+  <div class="admin-form-grid" style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr auto; gap: 12px; align-items: end;">
     <div>
       <label class="form-label" style="display: block; font-size: 12px; font-weight: 600; color: var(--aeroseal-midnight-blue); margin-bottom: 4px;">Email</label>
       <input type="email" id="new-email" class="form-input" placeholder="jsmith@aeroseal.com" style="font-size: 14px; padding: 10px 12px; border: 1px solid var(--aeroseal-titanium); border-radius: 6px; width: 100%;">
@@ -49,6 +49,7 @@
 </h2>
 
 <div class="card">
+  <div class="table-scroll">
   <table class="txn-table">
     <thead>
       <tr>
@@ -95,6 +96,7 @@
       {% endfor %}
     </tbody>
   </table>
+  </div>
 </div>
 
 <!-- Edit User Modal -->

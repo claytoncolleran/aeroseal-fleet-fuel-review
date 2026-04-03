@@ -13,7 +13,7 @@
   <div id="upload-error" class="section-banner banner-warn" style="display: none; margin-bottom: 12px;"></div>
   <div id="upload-success" class="section-banner banner-info" style="display: none; margin-bottom: 12px;"></div>
 
-  <form id="review-form" style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 16px; align-items: end;">
+  <form id="review-form" class="admin-form-grid" style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 16px; align-items: end;">
     <div>
       <label class="form-label" style="display: block; font-size: 12px; font-weight: 600; color: var(--aeroseal-midnight-blue); margin-bottom: 4px;">Corpay Spreadsheet</label>
       <input type="file" id="corpay-file" accept=".xlsx,.xls" style="font-family: var(--font-primary); font-size: 13px;">
@@ -40,7 +40,7 @@
 <!-- ═══ Active Review ═══ -->
 {% if active %}
 <div class="card" style="padding: 24px; margin-bottom: 24px; border-left: 4px solid var(--aeroseal-sapphire);">
-  <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+  <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px;">
     <div>
       <h2 style="font-size: 16px; font-weight: 700; color: var(--aeroseal-steel-blue); margin-bottom: 4px;">
         Active: {{ active.label or active.period }}
@@ -61,7 +61,7 @@
       </div>
       {% endif %}
     </div>
-    <div style="display: flex; gap: 8px;">
+    <div style="display: flex; gap: 8px; flex-wrap: wrap;">
       <button class="btn btn-approve" style="padding: 8px 20px; font-size: 13px;" onclick="sendNotifications('{{ active.period }}')">
         {% if active.notifications_sent_at %}Resend Notifications{% else %}Send Notifications{% endif %}
       </button>

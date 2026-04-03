@@ -99,6 +99,26 @@
     }
     .sig-label { font-size: 10px; color: #5A6B7B; text-transform: uppercase; }
 
+    /* Responsive */
+    @media (max-width: 768px) {
+      .report { padding: 16px; }
+      .report-header { flex-direction: column; gap: 12px; }
+      .report-meta { text-align: left; }
+      .report-title { font-size: 18px; }
+      .summary-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+      .summary-value { font-size: 18px; }
+      .summary-box { padding: 10px; }
+      table { font-size: 10px; }
+      th, td { padding: 4px 6px; }
+      .action-bar { flex-direction: column; gap: 10px; align-items: stretch; }
+      .action-bar > div:last-child { flex-direction: column; }
+      .admin-input { width: 100%; }
+      .btn { width: 100%; text-align: center; }
+      .signature-block { flex-direction: column; gap: 24px; }
+      .sig-line { width: 100%; }
+      .table-scroll-report { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    }
+
     /* Print */
     .no-print { }
     @media print {
