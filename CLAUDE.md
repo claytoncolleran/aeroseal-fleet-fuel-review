@@ -61,14 +61,14 @@ Fuel analytics and fleet manager review workflow for Aeroseal's fleet. Ingests m
 ```
 
 ### Database Schema (PostgreSQL on Render)
-Tables: `users`, `reviews`, `transactions`, `flags`, `vehicle_mpg`, `decisions`, `group_submissions`, `admin_approvals`. All tables auto-created on startup via `db.init_db()`. Cascading deletes via foreign keys ensure clean review deletion.
+Tables: `users`, `reviews`, `transactions`, `flags`, `vehicle_mpg`, `decisions`, `group_submissions`, `admin_approvals`, `flag_settings`. All tables auto-created on startup via `db.init_db()`. Cascading deletes via foreign keys ensure clean review deletion.
 
 ## Email Notifications
 - **Provider:** Resend (resend.com) — HTTP API, no SDK dependency
 - **Sending domain:** `aeroseal.com` (verified in Resend)
 - **From address:** `notifications@aeroseal.com`
 - **Note:** Sending via Resend from aeroseal.com — ensure DNS records (SPF, DKIM) are configured in Resend so emails pass authentication
-- **Notification types:** initial review ready, reminders for pending managers, admin notification when all managers have submitted
+- **Notification types:** user invite/password reset, initial review ready, reminders for pending managers, admin notification when all managers have submitted
 
 ## Credentials & Environment Variables
 **Local (.env, gitignored):**
@@ -87,14 +87,16 @@ Tables: `users`, `reviews`, `transactions`, `flags`, `vehicle_mpg`, `decisions`,
 | `DATABASE_URL` | PostgreSQL connection string (auto-set by Render from linked database) |
 
 ## Anomaly Flags
-| Flag | Level | Logic |
-|---|---|---|
-| F1 — Fuel Efficiency | **Vehicle-level** | Period MPG = (Last Odo - First Odo) / Sum(Gallons from fill 2+). Flag if >20% below baseline. NOT per-transaction. |
-| F2 — Cost Per Gallon | Transaction | Flag if >15% above monthly median for that fuel type |
-| F3 — Odometer Issue | Transaction | Missing or decreasing odometer readings |
-| F4 — Small Fill | Transaction | Fill < 25% of vehicle's average. Skips Corpay 1.0-gal defaults (no odometer entered). |
-| F5 — High Frequency | Transaction | Driver with >3 fills in any 24-hour window |
-| F6 — Wrong Fuel Type | Transaction | Fuel mismatch vs Fleetio record. Gas vehicles: regular unleaded only. |
+All flag thresholds are configurable via `/admin/settings`. Global defaults + per-group overrides stored in `flag_settings` table. Settings must be configured before uploading a spreadsheet (applied at processing time, not retroactively).
+
+| Flag | Level | Default Logic | Configurable |
+|---|---|---|---|
+| F1 — Fuel Efficiency | **Vehicle-level** | Period MPG >20% below baseline | Threshold %, enable/disable |
+| F2 — Cost Per Gallon | Transaction | >15% above monthly median for fuel type | Threshold %, enable/disable |
+| F3 — Odometer Issue | Transaction | Missing or decreasing odometer readings | Enable/disable |
+| F4 — Small Fill | Transaction | Fill < 25% of vehicle's average. Skips Corpay 1.0-gal defaults. | Threshold %, enable/disable |
+| F5 — High Frequency | Transaction | Driver with >3 fills in any 24-hour window | Fill count, time window, enable/disable |
+| F6 — Wrong Fuel Type | Transaction | Fuel mismatch vs Fleetio record. Gas vehicles: regular unleaded only. | Allowed fuel types per group, enable/disable |
 
 ## Manager Actions — Acknowledge / Comment
 Fleet managers review flagged transactions and take one of two actions:
@@ -109,12 +111,15 @@ Per-fill MPG is **not used** because drivers don't always fill to full or drive 
 **Corpay 1.0-gallon defaults:** When no odometer is entered at the pump, Corpay defaults gallons to 1.0 with variable pricing. These are excluded from MPG calculations and Flag 4 analysis.
 
 ## Data Flow
-1. Admin uploads `Corpay_Transactions.xlsx` via `/admin/reviews`
-2. `anomaly_detection.py` runs with custom paths → generates `anomaly_report.json`
-3. Fleetio API provides vehicles + fleet groups (pulled live during processing)
-4. Matching: Corpay `Cardholder Last Name` suffix (zero-padded) → Fleetio vehicle name suffix
-5. Card type split: `VEHICLE` (analysis) | `UNIT`/`EQUIPMENT` (excluded) | `TEMPORARY` (separate section)
-6. Flask app reads report + decisions from the active review's directory (or database)
+1. Admin configures flag settings at `/admin/settings` (global defaults + per-group overrides)
+2. Admin uploads `Corpay_Transactions.xlsx` via `/admin/reviews`
+3. `anomaly_detection.py` runs with flag settings + custom paths → generates `anomaly_report.json`
+4. Fleetio API provides vehicles + fleet groups (pulled live during processing)
+5. Corpay header row auto-detected (handles raw exports with metadata rows before column headers)
+6. Matching: Corpay `Cardholder Last Name` suffix (zero-padded) → Fleetio vehicle name suffix
+7. Card type split: `VEHICLE` (analysis) | `UNIT`/`EQUIPMENT` (excluded) | `TEMPORARY` (separate section)
+8. Report data stored in PostgreSQL (`transactions`, `flags`, `vehicle_mpg` tables) and reconstructed via `db_build_report()`
+9. Flask app reads report + decisions from the database (falls back to JSON files if no DB)
 
 ## Running Locally
 ```bash
@@ -147,14 +152,19 @@ python3 tools/anomaly_detection.py
 | AEROSEAL SATX | Robert Tamayo |
 
 ## Development Status
-All core phases complete. System is deployed and operational.
+All core phases complete. System is deployed and operational. First live review (2026-03) in progress as of 2026-04-02.
+
 - Phases 1-5: COMPLETE
 - Authentication + user management: COMPLETE
+- Email invite flow (no temp passwords): COMPLETE
 - PostgreSQL database layer with JSON fallback: COMPLETE
 - Render deployment with persistent disk + database: COMPLETE
 - Monthly review workflow (upload/process/notify/archive): COMPLETE
-- Email notifications via Resend: COMPLETE
+- Email notifications via Resend (aeroseal.com domain): COMPLETE
 - Acknowledge/Comment terminology (replaced Approve/Deny): COMPLETE
 - Auto-notify admins when all managers submit: COMPLETE
 - Delete review functionality: COMPLETE
-- Sending domain: aeroseal.com via Resend (previously aeroseal.app)
+- Configurable flag settings (global defaults + per-group overrides): COMPLETE
+- Corpay header row auto-detection: COMPLETE
+- Report data loaded from PostgreSQL (db_build_report): COMPLETE
+- Aeroseal brand mark favicon + header logo: COMPLETE
