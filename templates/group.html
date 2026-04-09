@@ -299,7 +299,7 @@ function updateProgress() {
   document.getElementById('reviewed-count').textContent = reviewed;
   const btn = document.getElementById('submit-btn');
   const nameInput = document.getElementById('manager-name');
-  btn.disabled = !(reviewed >= totalFlagged && totalFlagged > 0 && nameInput.value.trim());
+  btn.disabled = !(reviewed >= totalFlagged && nameInput.value.trim());
 }
 
 document.getElementById('manager-name').addEventListener('input', updateProgress);
