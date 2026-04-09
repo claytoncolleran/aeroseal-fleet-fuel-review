@@ -168,3 +168,4 @@ All core phases complete. System is deployed and operational. First live review 
 - Corpay header row auto-detection: COMPLETE
 - Report data loaded from PostgreSQL (db_build_report): COMPLETE
 - Aeroseal brand mark favicon + header logo: COMPLETE
+- Zero-flag manager submission fix (managers with no flags can sign and submit): COMPLETE
