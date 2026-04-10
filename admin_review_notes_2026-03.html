@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fleet Administrator Review Notes - March 2026 - Aeroseal</title>
+  <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --aeroseal-steel-blue: #005A90;
+      --aeroseal-sapphire: #008CD1;
+      --aeroseal-sky-blue: #51BDE7;
+      --aeroseal-midnight-blue: #113C5B;
+      --aeroseal-citrus-green: #C9DC50;
+      --aeroseal-titanium: #CBD0D4;
+      --risk-red: #C62828;
+      --risk-amber: #E65100;
+      --risk-green: #2E7D32;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Figtree', Arial, sans-serif;
+      font-size: 12px; color: var(--aeroseal-midnight-blue);
+      line-height: 1.55; background: #fff;
+    }
+    .report { max-width: 960px; margin: 0 auto; padding: 40px; }
+
+    /* Header */
+    .report-header {
+      display: flex; justify-content: space-between; align-items: flex-start;
+      padding-bottom: 20px; border-bottom: 3px solid var(--aeroseal-sapphire);
+      margin-bottom: 24px;
+    }
+    .report-title { font-size: 22px; font-weight: 700; color: var(--aeroseal-steel-blue); }
+    .report-subtitle { font-size: 13px; color: #5A6B7B; margin-top: 4px; }
+    .report-meta { text-align: right; font-size: 11px; color: #5A6B7B; }
+    .report-meta strong { color: var(--aeroseal-midnight-blue); }
+
+    /* Sections */
+    h2 {
+      font-size: 16px; font-weight: 700; color: var(--aeroseal-steel-blue);
+      margin: 28px 0 12px; padding-bottom: 6px;
+      border-bottom: 2px solid var(--aeroseal-sapphire);
+    }
+    h3 {
+      font-size: 14px; font-weight: 600; color: var(--aeroseal-midnight-blue);
+      margin: 18px 0 8px;
+    }
+    p { margin-bottom: 10px; }
+    ul, ol { margin: 8px 0 12px 22px; }
+    li { margin-bottom: 6px; }
+
+    /* Tables */
+    table { width: 100%; border-collapse: collapse; margin-bottom: 16px; font-size: 11px; }
+    th {
+      background: var(--aeroseal-midnight-blue); color: #fff;
+      padding: 6px 10px; text-align: left; font-weight: 600;
+      font-size: 10px; text-transform: uppercase; letter-spacing: 0.04em;
+    }
+    td { padding: 6px 10px; border-bottom: 1px solid #E8ECF0; vertical-align: top; }
+    tr:last-child td { border-bottom: none; }
+    td.num { text-align: right; font-variant-numeric: tabular-nums; }
+    td.flags { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 10px; color: var(--risk-red); font-weight: 600; }
+
+    /* Summary grid */
+    .summary-grid {
+      display: grid; grid-template-columns: repeat(4, 1fr);
+      gap: 12px; margin-bottom: 20px;
+    }
+    .summary-box {
+      text-align: center; padding: 14px 10px;
+      border: 1px solid #E8ECF0; border-radius: 6px;
+      border-top: 3px solid var(--aeroseal-sapphire);
+    }
+    .summary-box.red { border-top-color: var(--risk-red); }
+    .summary-box.amber { border-top-color: var(--risk-amber); }
+    .summary-box.green { border-top-color: var(--risk-green); }
+    .summary-value { font-size: 24px; font-weight: 700; color: var(--aeroseal-sapphire); }
+    .summary-box.red .summary-value { color: var(--risk-red); }
+    .summary-box.amber .summary-value { color: var(--risk-amber); }
+    .summary-box.green .summary-value { color: var(--risk-green); }
+    .summary-label {
+      font-size: 10px; font-weight: 600; text-transform: uppercase;
+      letter-spacing: 0.05em; color: #5A6B7B; margin-top: 4px;
+    }
+
+    /* Callout box */
+    .callout {
+      background: #F0F8FC; border-left: 4px solid var(--aeroseal-sapphire);
+      padding: 14px 18px; margin: 14px 0 18px; border-radius: 0 6px 6px 0;
+      font-size: 12px;
+    }
+    .callout.red { background: #FFF5F5; border-left-color: var(--risk-red); }
+    .callout.amber { background: #FFF8E1; border-left-color: var(--risk-amber); }
+    .callout.green { background: #F1F8E9; border-left-color: var(--risk-green); }
+    .callout strong { color: var(--aeroseal-midnight-blue); }
+
+    /* Risk section headers */
+    .risk-header {
+      display: flex; align-items: center; gap: 10px;
+      margin-top: 28px; margin-bottom: 6px;
+      padding: 10px 14px; border-radius: 6px;
+      font-size: 15px; font-weight: 700;
+    }
+    .risk-header .risk-label {
+      font-size: 10px; font-weight: 700; padding: 3px 8px;
+      border-radius: 10px; text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+    .risk-header.red { background: #FFF5F5; color: var(--risk-red); }
+    .risk-header.red .risk-label { background: var(--risk-red); color: #fff; }
+    .risk-header.amber { background: #FFF8E1; color: var(--risk-amber); }
+    .risk-header.amber .risk-label { background: var(--risk-amber); color: #fff; }
+    .risk-header.green { background: #F1F8E9; color: var(--risk-green); }
+    .risk-header.green .risk-label { background: var(--risk-green); color: #fff; }
+
+    /* Action list */
+    .action-item {
+      padding: 14px 18px; margin-bottom: 10px;
+      border: 1px solid #E8ECF0; border-radius: 6px;
+      border-left: 4px solid var(--aeroseal-sapphire);
+    }
+    .action-item .action-num {
+      display: inline-block; width: 22px; height: 22px;
+      background: var(--aeroseal-sapphire); color: #fff;
+      border-radius: 50%; text-align: center; line-height: 22px;
+      font-size: 11px; font-weight: 700; margin-right: 8px;
+    }
+    .action-item h4 {
+      display: inline; font-size: 13px; font-weight: 700;
+      color: var(--aeroseal-steel-blue);
+    }
+    .action-item p { margin-top: 8px; margin-left: 30px; font-size: 11px; }
+
+    /* Action bar */
+    .action-bar {
+      position: sticky; top: 0; z-index: 10;
+      background: #fff; padding: 12px 0; margin-bottom: 16px;
+      border-bottom: 1px solid #E8ECF0;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .btn {
+      font-family: 'Figtree', Arial, sans-serif; font-weight: 600;
+      font-size: 13px; padding: 8px 24px; border-radius: 6px;
+      border: none; cursor: pointer; transition: all 0.2s;
+    }
+    .btn-outline {
+      background: transparent; color: var(--aeroseal-sapphire);
+      border: 1.5px solid var(--aeroseal-sapphire);
+    }
+    .btn-outline:hover { background: var(--aeroseal-sapphire); color: #fff; }
+
+    /* Signature */
+    .signature-block {
+      margin-top: 40px; padding-top: 20px;
+      border-top: 1px solid var(--aeroseal-titanium);
+      display: flex; justify-content: space-between;
+    }
+    .sig-line {
+      width: 280px; border-bottom: 1px solid var(--aeroseal-midnight-blue);
+      padding-bottom: 4px; margin-bottom: 4px;
+      font-size: 13px; min-height: 24px;
+    }
+    .sig-label { font-size: 10px; color: #5A6B7B; text-transform: uppercase; letter-spacing: 0.04em; }
+
+    /* Print */
+    @media print {
+      body { font-size: 10.5px; }
+      .report { padding: 20px; max-width: 100%; }
+      .no-print { display: none !important; }
+      h2 { page-break-after: avoid; }
+      h3 { page-break-after: avoid; }
+      .risk-header { page-break-after: avoid; }
+      table { page-break-inside: auto; }
+      tr { page-break-inside: avoid; }
+      .action-item { page-break-inside: avoid; }
+      .callout { page-break-inside: avoid; }
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .report { padding: 16px; }
+      .report-header { flex-direction: column; gap: 12px; }
+      .report-meta { text-align: left; }
+      .report-title { font-size: 18px; }
+      .summary-grid { grid-template-columns: repeat(2, 1fr); }
+      .summary-value { font-size: 20px; }
+      .signature-block { flex-direction: column; gap: 24px; }
+      .sig-line { width: 100%; }
+    }
+  </style>
+</head>
+<body>
+<div class="report">
+
+  <!-- Action Bar (screen only) -->
+  <div class="action-bar no-print">
+    <div>
+      <span style="font-size: 13px; color: var(--aeroseal-sapphire); font-weight: 600;">Fleet Administrator Briefing - Action Required</span>
+    </div>
+    <div>
+      <button class="btn btn-outline" onclick="window.print()">Download PDF</button>
+    </div>
+  </div>
+
+  <!-- Report Header -->
+  <div class="report-header">
+    <div>
+      <div class="report-title">Fleet Administrator Review Notes</div>
+      <div class="report-subtitle">March 2026 Fuel Review - Items Requiring Follow-Up Before Sign-Off</div>
+    </div>
+    <div class="report-meta">
+      <strong>Prepared:</strong> 2026-04-10<br>
+      <strong>Period:</strong> March 2026<br>
+      <strong>Review Status:</strong> 9 of 9 managers submitted<br>
+      <strong>Total Flagged Transactions:</strong> 109
+    </div>
+  </div>
+
+  <!-- TL;DR Callout -->
+  <div class="callout amber">
+    <strong>Summary:</strong> All nine fleet managers have completed the first round of review and submitted their approvals. Every one of the 109 flagged transactions was acknowledged with <strong>zero written comments</strong>. Before the Fleet Administrator signs off on the consolidated accounting report, three fleet managers should be asked to provide written context on specific transactions. This document lists the exact items that warrant follow-up.
+  </div>
+
+  <!-- Executive Summary Stats -->
+  <h2>Review Snapshot</h2>
+  <div class="summary-grid">
+    <div class="summary-box">
+      <div class="summary-value">109</div>
+      <div class="summary-label">Flagged Transactions</div>
+    </div>
+    <div class="summary-box green">
+      <div class="summary-value">109</div>
+      <div class="summary-label">Acknowledged</div>
+    </div>
+    <div class="summary-box red">
+      <div class="summary-value">0</div>
+      <div class="summary-label">With Comments</div>
+    </div>
+    <div class="summary-box amber">
+      <div class="summary-value">3</div>
+      <div class="summary-label">Managers to Follow Up</div>
+    </div>
+  </div>
+
+  <h3>Flag Type Distribution</h3>
+  <table>
+    <thead>
+      <tr><th>Flag</th><th>Type</th><th class="num">Count</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><strong>F1</strong></td><td>Fuel Efficiency (MPG below baseline)</td><td class="num">0</td></tr>
+      <tr><td><strong>F2</strong></td><td>Cost Per Gallon Outlier</td><td class="num">28</td></tr>
+      <tr><td><strong>F3</strong></td><td>Invalid or Missing Odometer</td><td class="num">65</td></tr>
+      <tr><td><strong>F4</strong></td><td>Unusually Small Fill</td><td class="num">6</td></tr>
+      <tr><td><strong>F5</strong></td><td>High Frequency Fills</td><td class="num">17</td></tr>
+      <tr><td><strong>F6</strong></td><td>Wrong Fuel Type</td><td class="num">25</td></tr>
+    </tbody>
+  </table>
+
+  <!-- Recommended Actions -->
+  <h2>Recommended Actions Before Sign-Off</h2>
+  <p>The Fleet Administrator should request written comments from the three fleet managers listed below before signing the consolidated accounting report. Each action item specifies which transactions to ask about and what question to raise.</p>
+
+  <div class="action-item">
+    <span class="action-num">1</span>
+    <h4>Request written comments from Jason Riley (Aeroseal OH)</h4>
+    <p>33 flagged transactions, the highest concentration of high-severity items. Key questions: the M85 methanol fill on a Ram truck, three $100+ transactions hidden behind $1 gallon defaults, and a recurring pattern of Riley's truck receiving premium-grade fuel across multiple drivers.</p>
+  </div>
+
+  <div class="action-item">
+    <span class="action-num">2</span>
+    <h4>Request written comments from Robert Kvenvik (Aeroseal LAS)</h4>
+    <p>23 flagged transactions, almost entirely cost-per-gallon outliers. Key questions: why Kevin Ascino repeatedly fills diesel into a Ram Van, and whether the fuel pricing spikes reflect normal Las Vegas market conditions or require investigation.</p>
+  </div>
+
+  <div class="action-item">
+    <span class="action-num">3</span>
+    <h4>Request written comments from Campbell Johnson (Aeroseal CO)</h4>
+    <p>26 flagged transactions, dominated by same-minute double-fills on two vehicles. Key question: whether drivers are legitimately filling both the vehicle and a company fuel container at the same stop, or something else is going on.</p>
+  </div>
+
+  <!-- JASON RILEY SECTION -->
+  <div class="risk-header red">
+    <span class="risk-label">High Priority</span>
+    <span>Jason Riley (Aeroseal OH) - 33 Flagged Transactions</span>
+  </div>
+
+  <h3>Issue 1: Methanol 85 fuel in a Ram truck</h3>
+  <table>
+    <thead>
+      <tr><th>Date</th><th>Vehicle</th><th>Driver</th><th>Product</th><th class="num">Gallons</th><th class="num">Cost</th><th>Flags</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>2026-03-09</td>
+        <td>22-Ram-Truck-4402</td>
+        <td>Dylan Donchez</td>
+        <td>M85 (Methanol 85%)</td>
+        <td class="num">35.79</td>
+        <td class="num">$105.54</td>
+        <td class="flags">F6</td>
+      </tr>
+    </tbody>
+  </table>
+  <p>A Ram truck is not rated to run on M85. Either the fuel type was misrecorded by the station, or this is a serious misfuel event that could damage the vehicle. Confirm with Jason Riley whether this fill actually occurred as recorded.</p>
+
+  <h3>Issue 2: Three "$1 gallon default" transactions concealing $100+ purchases</h3>
+  <div class="callout">
+    <strong>Context:</strong> When a driver does not enter an odometer at the pump, Corpay defaults the gallons field to 1.0 with variable pricing. The dollar amount still reflects the real transaction, but the per-gallon and volume data is lost.
+  </div>
+  <table>
+    <thead>
+      <tr><th>Date</th><th>Vehicle</th><th>Driver</th><th class="num">Default Gal</th><th class="num">Cost</th><th>Flags</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>2026-03-13</td><td>22-Ram-Truck-4402</td><td>Joseph Messer</td><td class="num">1.00</td><td class="num">$116.48</td><td class="flags">F3</td></tr>
+      <tr><td>2026-03-13</td><td>22-Ram-Truck-8540</td><td>Nick Miller</td><td class="num">1.00</td><td class="num">$139.00</td><td class="flags">F3</td></tr>
+      <tr><td>2026-03-14</td><td>22-Ram-Truck-8540</td><td>Jurrel Glass</td><td class="num">1.00</td><td class="num">$148.65</td><td class="flags">F3</td></tr>
+    </tbody>
+  </table>
+  <p>Ask Jason to confirm each of these transactions was legitimate and provide odometer readings for his records.</p>
+
+  <h3>Issue 3: 24-Ford-Truck-5970 repeatedly fueled with premium grades</h3>
+  <p>The fleet baseline for this truck is Unleaded Regular. Across the month, it was filled with Mid Grade, Premium, or Super at least 12 times by four different drivers. Pattern suggests either a baseline data error in Fleetio, an undocumented vehicle change, or routine unnecessary grade upgrades.</p>
+  <table>
+    <thead>
+      <tr><th>Date</th><th>Driver</th><th>Product</th><th class="num">Gallons</th><th class="num">$/Gal</th><th class="num">Cost</th><th>Flags</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>2026-03-12</td><td>Javon Glass</td><td>Mid Grade</td><td class="num">22.58</td><td class="num">$3.900</td><td class="num">$88.06</td><td class="flags">F3,F6</td></tr>
+      <tr><td>2026-03-12</td><td>Javon Glass</td><td>Mid Grade</td><td class="num">24.63</td><td class="num">$3.799</td><td class="num">$93.58</td><td class="flags">F3,F6</td></tr>
+      <tr><td>2026-03-19</td><td>Ernest Cannon</td><td>Premium</td><td class="num">22.34</td><td class="num">$4.778</td><td class="num">$106.74</td><td class="flags">F3,F6</td></tr>
+      <tr><td>2026-03-24</td><td>Jason Riley</td><td>Super 92-94</td><td class="num">23.63</td><td class="num">$4.799</td><td class="num">$113.41</td><td class="flags">F2,F3</td></tr>
+      <tr><td>2026-03-25</td><td>Ernest Cannon</td><td>Premium</td><td class="num">27.02</td><td class="num">$4.730</td><td class="num">$127.80</td><td class="flags">F3,F6</td></tr>
+      <tr><td>2026-03-26</td><td>Ernest Cannon</td><td>Premium</td><td class="num">28.76</td><td class="num">$4.349</td><td class="num">$125.07</td><td class="flags">F3,F6</td></tr>
+      <tr><td>2026-03-26</td><td>Javon Glass</td><td>Premium</td><td class="num">23.54</td><td class="num">$3.900</td><td class="num">$91.81</td><td class="flags">F3,F6</td></tr>
+      <tr><td>2026-03-26</td><td>Jurrel Glass</td><td>Super 92-94</td><td class="num">16.11</td><td class="num">$3.849</td><td class="num">$62.00</td><td class="flags">F3</td></tr>
+      <tr><td>2026-03-26</td><td>Jurrel Glass</td><td>Premium</td><td class="num">24.09</td><td class="num">$4.119</td><td class="num">$99.23</td><td class="flags">F3,F6</td></tr>
+      <tr><td>2026-03-27</td><td>Ernest Cannon</td><td>Super 92-94</td><td class="num">30.54</td><td class="num">$4.059</td><td class="num">$123.95</td><td class="flags">F3</td></tr>
+      <tr><td>2026-03-28</td><td>Ernest Cannon</td><td>Super 92-94</td><td class="num">18.71</td><td class="num">$3.800</td><td class="num">$71.10</td><td class="flags">F3</td></tr>
+      <tr><td>2026-03-28</td><td>Ernest Cannon</td><td>Premium</td><td class="num">17.10</td><td class="num">$4.150</td><td class="num">$70.96</td><td class="flags">F3,F6</td></tr>
+      <tr><td>2026-03-28</td><td>Ernest Cannon</td><td>Super 92-94</td><td class="num">24.99</td><td class="num">$4.701</td><td class="num">$117.47</td><td class="flags">F2,F3</td></tr>
+      <tr><td>2026-03-28</td><td>Javon Glass</td><td>Premium</td><td class="num">15.38</td><td class="num">$4.400</td><td class="num">$67.67</td><td class="flags">F3,F6</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Issue 4: Diesel fills in 22-Ram-Truck-8540 (potentially wrong vehicle tag)</h3>
+  <table>
+    <thead>
+      <tr><th>Date</th><th>Driver</th><th>Product</th><th class="num">Gallons</th><th class="num">$/Gal</th><th class="num">Cost</th><th>Flags</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>2026-03-20</td><td>Jurrel Glass</td><td>Diesel #2</td><td class="num">10.99</td><td class="num">$5.732</td><td class="num">$63.00</td><td class="flags">F2,F3</td></tr>
+      <tr><td>2026-03-20</td><td>Jurrel Glass</td><td>Diesel #2</td><td class="num">24.99</td><td class="num">$5.579</td><td class="num">$139.43</td><td class="flags">F2</td></tr>
+      <tr><td>2026-03-20</td><td>Jurrel Glass</td><td>Diesel #2</td><td class="num">20.98</td><td class="num">$5.602</td><td class="num">$117.52</td><td class="flags">F2</td></tr>
+    </tbody>
+  </table>
+  <p>If 22-Ram-Truck-8540 is a gasoline truck, three diesel fills on the same day is a significant misfuel. If it is a diesel truck, the Fleetio vehicle record needs to be corrected.</p>
+
+  <h3>Issue 5: Implausible odometer reading</h3>
+  <table>
+    <thead>
+      <tr><th>Date</th><th>Vehicle</th><th>Driver</th><th>Product</th><th class="num">Odometer</th><th>Flags</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>2026-03-17</td><td>23-Ford-Van-4141</td><td>Leonel Murcia</td><td>Diesel #2</td><td class="num">724,121</td><td class="flags">F4,F6</td></tr>
+    </tbody>
+  </table>
+  <p>A 2023 Ford Van with 724,121 miles is not plausible. Either the odometer was keyed wrong at the pump, or this is an F6 wrong-fuel event on a gas vehicle.</p>
+
+  <!-- ROBERT KVENVIK SECTION -->
+  <div class="risk-header red">
+    <span class="risk-label">High Priority</span>
+    <span>Robert Kvenvik (Aeroseal LAS) - 23 Flagged Transactions</span>
+  </div>
+
+  <h3>Issue 1: Kevin Ascino repeatedly fills diesel in 23-Ram-Van-4553</h3>
+  <table>
+    <thead>
+      <tr><th>Date</th><th>Product</th><th class="num">Gallons</th><th class="num">$/Gal</th><th class="num">Cost</th><th>Flags</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>2026-03-10</td><td>Diesel #2</td><td class="num">10.57</td><td class="num">$4.500</td><td class="num">$47.56</td><td class="flags">F6</td></tr>
+      <tr><td>2026-03-12</td><td>Diesel #2</td><td class="num">6.20</td><td class="num">$4.702</td><td class="num">$29.15</td><td class="flags">F6</td></tr>
+      <tr><td>2026-03-16</td><td>Diesel #2</td><td class="num">4.56</td><td class="num">$5.004</td><td class="num">$22.82</td><td class="flags">F6</td></tr>
+      <tr><td>2026-03-19</td><td>Unleaded Premium</td><td class="num">5.76</td><td class="num">$5.599</td><td class="num">$32.22</td><td class="flags">F2,F3,F6</td></tr>
+      <tr><td>2026-03-20</td><td>Unleaded Premium</td><td class="num">6.27</td><td class="num">$5.599</td><td class="num">$35.12</td><td class="flags">F2,F3,F6</td></tr>
+    </tbody>
+  </table>
+  <p>Five consecutive F6 events on the same vehicle, same driver, is not random error. Either 23-Ram-Van-4553 is actually a diesel vehicle mistagged in Fleetio, or Kevin Ascino is repeatedly using the wrong card or pump. Also note the two March 19-20 fills jumped to Premium gas at very high prices with odometers of 780 and 7725 respectively, neither of which is consistent with a working van.</p>
+
+  <h3>Issue 2: Pattern of cost-per-gallon outliers across the Las Vegas fleet</h3>
+  <div class="callout">
+    <strong>Fleet median for Unleaded Regular:</strong> $3.599/gal. Las Vegas group fills below routinely ran 30-70% above that median.
+  </div>
+  <table>
+    <thead>
+      <tr><th>Date</th><th>Vehicle</th><th>Driver</th><th class="num">$/Gal</th><th class="num">Cost</th><th>Flags</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>2026-03-05</td><td>23-Ram-Van-6741</td><td>Drake Dorowski</td><td class="num">$4.969</td><td class="num">$72.42</td><td class="flags">F2</td></tr>
+      <tr><td>2026-03-10</td><td>23-Ram-Van-1520</td><td>Franklin Church</td><td class="num">$4.802</td><td class="num">$81.53</td><td class="flags">F2,F6</td></tr>
+      <tr><td>2026-03-11</td><td>23-Ram-Van-1521</td><td>Isaac Saadan</td><td class="num">$5.399</td><td class="num">$108.46</td><td class="flags">F2</td></tr>
+      <tr><td>2026-03-17</td><td>23-Ram-Van-1520</td><td>Franklin Church</td><td class="num">$5.159</td><td class="num">$96.49</td><td class="flags">F2,F6</td></tr>
+      <tr><td>2026-03-17</td><td>23-Ram-Van-6741</td><td>Drake Dorowski</td><td class="num">$6.199</td><td class="num">$126.91</td><td class="flags">F2,F6</td></tr>
+      <tr><td>2026-03-18</td><td>23-Ram-Van-1521</td><td>Isaac Saadan</td><td class="num">$5.999</td><td class="num">$67.16</td><td class="flags">F2</td></tr>
+      <tr><td>2026-03-23</td><td>23-Ram-Van-4555</td><td>Ivan Pantoja</td><td class="num">$5.201</td><td class="num">$94.40</td><td class="flags">F2</td></tr>
+      <tr><td>2026-03-24</td><td>23-Ram-Van-1521</td><td>Isaac Saadan</td><td class="num">$6.099</td><td class="num">$55.00</td><td class="flags">F2</td></tr>
+      <tr><td>2026-03-25</td><td>23-Ram-Van-1520</td><td>Franklin Church</td><td class="num">$5.100</td><td class="num">$91.03</td><td class="flags">F2,F6</td></tr>
+      <tr><td>2026-03-26</td><td>23-Ram-Van-6741</td><td>Drake Dorowski</td><td class="num">$5.551</td><td class="num">$107.07</td><td class="flags">F2</td></tr>
+    </tbody>
+  </table>
+  <p>Ask Robert Kvenvik to confirm these prices reflect normal Las Vegas-area retail fuel (which does typically run higher than the fleet-wide median), and whether drivers are being directed to lower-cost stations when possible.</p>
+
+  <!-- CAMPBELL JOHNSON SECTION -->
+  <div class="risk-header amber">
+    <span class="risk-label">Medium Priority</span>
+    <span>Campbell Johnson (Aeroseal CO) - 26 Flagged Transactions</span>
+  </div>
+
+  <h3>Issue 1: Same-minute double-fills on 25-Ford-Van-0389 (Kevin Giblin)</h3>
+  <p>Eight paired transactions where Kevin Giblin filled two different fuel grades (Premium and Mid Grade Reformulated) within 1-3 minutes at the same odometer reading. This pattern is consistent with fueling the vehicle plus a separate container at the same stop, but it should be explicitly documented.</p>
+  <table>
+    <thead>
+      <tr><th>Date</th><th>Time</th><th>Product</th><th class="num">Gallons</th><th class="num">Cost</th><th class="num">Odometer</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>2026-03-16</td><td>06:44:24</td><td>Mid Grade Reformulated</td><td class="num">12.64</td><td class="num">$51.82</td><td class="num">1,939</td></tr>
+      <tr><td>2026-03-16</td><td>06:47:35</td><td>Premium</td><td class="num">9.86</td><td class="num">$43.36</td><td class="num">1,939</td></tr>
+      <tr><td>2026-03-17</td><td>06:35:22</td><td>Mid Grade Reformulated</td><td class="num">21.70</td><td class="num">$88.95</td><td class="num">2,215</td></tr>
+      <tr><td>2026-03-17</td><td>06:38:37</td><td>Premium</td><td class="num">4.87</td><td class="num">$21.41</td><td class="num">2,215</td></tr>
+      <tr><td>2026-03-25</td><td>07:38:57</td><td>Mid Grade Reformulated</td><td class="num">9.44</td><td class="num">$38.22</td><td class="num">2,795</td></tr>
+      <tr><td>2026-03-25</td><td>07:41:50</td><td>Premium</td><td class="num">4.42</td><td class="num">$19.21</td><td class="num">2,795</td></tr>
+      <tr><td>2026-03-26</td><td>07:00:05</td><td>Premium</td><td class="num">3.54</td><td class="num">$15.41</td><td class="num">2,903</td></tr>
+      <tr><td>2026-03-26</td><td>07:01:24</td><td>Mid Grade Reformulated</td><td class="num">7.86</td><td class="num">$31.83</td><td class="num">2,903</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Issue 2: Same-minute double-fills on 23-Ram-Van-5260 (Sam Swift)</h3>
+  <p>Eight additional paired transactions following the same pattern (Premium plus Regular, seconds apart, same odometer).</p>
+  <table>
+    <thead>
+      <tr><th>Date</th><th>Time</th><th>Product</th><th class="num">Gallons</th><th class="num">Cost</th><th class="num">Odometer</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>2026-03-23</td><td>07:14:04</td><td>Premium</td><td class="num">4.84</td><td class="num">$21.20</td><td class="num">28,617</td></tr>
+      <tr><td>2026-03-23</td><td>07:15:28</td><td>Regular</td><td class="num">4.78</td><td class="num">$18.05</td><td class="num">28,617</td></tr>
+      <tr><td>2026-03-24</td><td>07:17:05</td><td>Premium</td><td class="num">9.92</td><td class="num">$43.13</td><td class="num">28,736</td></tr>
+      <tr><td>2026-03-24</td><td>07:20:19</td><td>Regular</td><td class="num">6.65</td><td class="num">$24.92</td><td class="num">28,736</td></tr>
+      <tr><td>2026-03-25</td><td>07:09:02</td><td>Premium</td><td class="num">4.72</td><td class="num">$20.52</td><td class="num">2,855</td></tr>
+      <tr><td>2026-03-25</td><td>07:10:14</td><td>Regular</td><td class="num">6.03</td><td class="num">$22.61</td><td class="num">28,855</td></tr>
+      <tr><td>2026-03-27</td><td>07:32:24</td><td>Premium</td><td class="num">2.75</td><td class="num">$11.96</td><td class="num">28,793</td></tr>
+      <tr><td>2026-03-27</td><td>07:33:42</td><td>Regular</td><td class="num">7.82</td><td class="num">$29.32</td><td class="num">28,973</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Issue 3: Cost outliers</h3>
+  <table>
+    <thead>
+      <tr><th>Date</th><th>Vehicle</th><th>Driver</th><th>Product</th><th class="num">$/Gal</th><th class="num">Cost</th><th>Flags</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>2026-03-23</td><td>20-Ford-Van-8256</td><td>Eamonn Martin</td><td>Mid Grade</td><td class="num">$5.499</td><td class="num">$119.09</td><td class="flags">F2</td></tr>
+      <tr><td>2026-03-27</td><td>23-Ram-Van-6743</td><td>Alex Porter</td><td>Mid Grade</td><td class="num">$5.001</td><td class="num">$112.62</td><td class="flags">F2,F3</td></tr>
+      <tr><td>2026-03-26</td><td>25-Ford-Van-0389</td><td>Kevin Giblin</td><td>Mid Grade</td><td class="num">-</td><td class="num">$83.62</td><td class="flags">F3 (odo 0)</td></tr>
+    </tbody>
+  </table>
+
+  <!-- LOWER PRIORITY -->
+  <div class="risk-header amber">
+    <span class="risk-label">Medium Priority</span>
+    <span>Robert Tamayo (Aeroseal CARTX/MAGTX/ODETX/SATX) - 6 Flagged</span>
+  </div>
+
+  <p>Two F6 (Wrong Fuel Type) transactions worth confirming, plus one vehicle-level record with no driver name captured.</p>
+  <table>
+    <thead>
+      <tr><th>Date</th><th>Vehicle</th><th>Driver</th><th>Product</th><th class="num">Cost</th><th>Flags</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>2026-03-16</td><td>23-Ram-Truck-9588</td><td>Malcolm Sherman</td><td>Diesel #2</td><td class="num">$21.49</td><td class="flags">F6</td></tr>
+      <tr><td>2026-03-17</td><td>23-Ram-Van-3653</td><td>Terry Turner</td><td>Unleaded Premium</td><td class="num">$60.04</td><td class="flags">F6</td></tr>
+      <tr><td>2026-03-17</td><td>19-Ram-Truck-0537</td><td>(no cardholder)</td><td>Unleaded Regular</td><td class="num">$56.34</td><td class="flags">F3</td></tr>
+    </tbody>
+  </table>
+  <p>Confirm whether 23-Ram-Truck-9588 is a diesel vehicle (if so, Fleetio needs updating and this flag can be dismissed). The "no cardholder" entry on 19-Ram-Truck-0537 indicates a card assigned directly to the vehicle rather than a driver, which is acceptable but should be noted.</p>
+
+  <div class="risk-header amber">
+    <span class="risk-label">Medium Priority</span>
+    <span>Corey Dean (Aeroseal GA) - 10 Flagged</span>
+  </div>
+  <p>One $1-gallon default transaction for $150.00 by Corey Dean himself on 2026-03-13 (vehicle 23-Ford-Van-4519). The other nine flags are mostly same-day paired fills on 23-Ford-Van-4519, which is plausible for a long-route driver but worth confirming.</p>
+
+  <div class="risk-header green">
+    <span class="risk-label">Low Priority</span>
+    <span>Caleb Severance, Pat Richardson, Max Zimmerman, Paul Pepelaskov</span>
+  </div>
+  <p>These four groups have minor or no issues and do not require follow-up. Details:</p>
+  <ul>
+    <li><strong>Caleb Severance (SUMSC, 8 flagged):</strong> Mostly $1-gallon odometer defaults. Note: one transaction is on 22-Ram-Truck-9005 by driver Payton Severance (name match with manager).</li>
+    <li><strong>Pat Richardson (MD, 2 flagged):</strong> Two small fills on 23-Ram-Van-6760 by Joseph Baker with placeholder odometer 9999.0. Low-value items.</li>
+    <li><strong>Max Zimmerman (AZ/NM, 1 flagged):</strong> His own van, Mid Grade instead of Regular. Single event.</li>
+    <li><strong>Paul Pepelaskov:</strong> Zero flagged transactions.</li>
+  </ul>
+
+  <!-- Process Notes -->
+  <h2>Process Observations</h2>
+  <p>In addition to the transaction-level items above, the Fleet Administrator may want to note the following process items when debriefing with the fleet managers:</p>
+  <ul>
+    <li><strong>Zero comments across 109 flags</strong> suggests managers may not fully understand that the Comment field is available for providing context, or that the default behavior is to "Acknowledge" through the queue. A reminder email before the next review cycle would be worthwhile.</li>
+    <li><strong>Two groups were submitted by delegates</strong> rather than the assigned fleet manager: Caleb Severance's group was submitted by Matthew Douglas, and Jason Riley's group was submitted by Mike Lanter. Confirm these delegations were authorized.</li>
+    <li><strong>One signature typo:</strong> Campbell Johnson signed his own submission as "Campbell Johnosn." No action required, but flagged for the record.</li>
+  </ul>
+
+  <!-- Signature Block -->
+  <div class="signature-block">
+    <div>
+      <div class="sig-line"></div>
+      <div class="sig-label">Fleet Administrator Signature</div>
+    </div>
+    <div>
+      <div class="sig-line"></div>
+      <div class="sig-label">Date</div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

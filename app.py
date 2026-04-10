@@ -5,7 +5,7 @@ Supports monthly review cycles with upload, process, notify, and archive.
 """
 
 from flask import (Flask, render_template, request, jsonify, redirect,
-                   url_for, session, flash)
+                   url_for, session, flash, send_file)
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 from functools import wraps
@@ -1263,6 +1263,20 @@ def delete_user(username):
         save_users(users)
 
     return jsonify({"status": "ok"})
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# ADMIN: REVIEW NOTES (standalone briefing docs)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+@app.route("/admin/review-notes/2026-03")
+@admin_required
+def admin_review_notes_2026_03():
+    """Serve the Fleet Administrator briefing document for the March 2026 review."""
+    return send_file(
+        os.path.join(BASE_DIR, "admin_review_notes_2026-03.html"),
+        mimetype="text/html",
+    )
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
