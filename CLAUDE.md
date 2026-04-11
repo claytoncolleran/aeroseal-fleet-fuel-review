@@ -152,7 +152,7 @@ python3 tools/anomaly_detection.py
 | AEROSEAL SATX | Robert Tamayo |
 
 ## Development Status
-All core phases complete. System is deployed and operational. First live review (2026-03) in progress as of 2026-04-02.
+All core phases complete. System is deployed and operational. First live review (2026-03) completed manager approval phase 2026-04-10 (9/9 submitted).
 
 - Phases 1-5: COMPLETE
 - Authentication + user management: COMPLETE
@@ -169,3 +169,24 @@ All core phases complete. System is deployed and operational. First live review 
 - Report data loaded from PostgreSQL (db_build_report): COMPLETE
 - Aeroseal brand mark favicon + header logo: COMPLETE
 - Zero-flag manager submission fix (managers with no flags can sign and submit): COMPLETE
+
+## Roadmap / Open Items
+
+### Fleet Administrator Review Notes (briefing doc) - productionize
+**Status:** Prototype exists as a static one-off at `/admin/review-notes/2026-03` (added 2026-04-10 commit `423d3b5`). It is a hard-coded HTML file listing flagged transactions that warrant follow-up with fleet managers before the Fleet Administrator signs off on the consolidated accounting report.
+
+**What it should become:**
+1. **Dynamic route** - replace the static `2026-03` file with a data-driven route like `/admin/review-notes/<period>` that queries the `transactions`, `flags`, `decisions`, and `group_submissions` tables and renders the briefing from live data for any review period.
+2. **Auto-generate at workflow milestone** - when the existing "all managers submitted" hook fires (currently sends an email to admins), extend that hook to also:
+   - Generate the review notes document for the period
+   - Include a link to it in the admin notification email
+   - Attach or embed a summary in the email itself
+3. **On-demand generation** - add a "Generate Review Notes" button to `/admin/report` (the consolidated accounting page) so the Fleet Administrator can pull it up at any time during the review cycle, not only after all submissions.
+4. **Content logic to port from the 2026-03 prototype:**
+   - Risk tiering (High / Medium / Low) per manager based on flag count and severity
+   - Pattern detection: same-minute double-fills, repeated F6 on same vehicle/driver, $1-gallon defaults with high dollar amounts, implausible odometer readings, cost-per-gallon outliers vs fleet median
+   - Process observations section (zero-comments pattern, delegated submissions, signature typos)
+   - Explicit action items naming which managers to follow up with and what questions to raise
+5. **Access fix** - the static 2026-03 page had a rendering issue where viewing it with a manager-role session appeared to scope to that manager's group. Dynamic version should enforce admin-only and never filter by session group.
+
+**Context for the feature:** The March 2026 review produced 109 flagged transactions with zero written comments, which masked several high-concern patterns (a potential methanol misfuel on a Ram truck, repeated diesel fills on vans, premium-grade upgrades across drivers). A structured briefing doc helps the Fleet Administrator catch these before signing off and gives managers a prompt to add missing context. This is the bridge between manager approval and accounting sign-off.
