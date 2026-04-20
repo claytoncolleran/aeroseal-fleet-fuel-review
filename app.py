@@ -581,8 +581,14 @@ def generate_report():
     groups = sorted(report.get("group_summary", {}).keys())
     active = get_active_review()
 
+    temp_by_group = {}
+    for t in report.get("temporary_cards", []):
+        g = t.get("fleet_group")
+        temp_by_group[g] = temp_by_group.get(g, 0) + (t.get("net_price") or 0)
+
     group_data = []
-    grand_total = 0
+    vehicle_grand_total = 0
+    temp_grand_total = 0
     total_flagged = 0
     total_approved = 0
     total_denied = 0
@@ -592,7 +598,9 @@ def generate_report():
         g_decisions = decisions.get(g, {})
         submission = g_decisions.get("_submission")
         spend = g_summary.get("total_spend", 0)
-        grand_total += spend
+        temp_spend = temp_by_group.get(g, 0)
+        vehicle_grand_total += spend
+        temp_grand_total += temp_spend
 
         g_txns = [t for t in report.get("transactions", []) if t["fleet_group"] == g]
         flagged = []
@@ -617,6 +625,8 @@ def generate_report():
             "approved": approved,
             "denied": denied,
             "spend": spend,
+            "temp_spend": temp_spend,
+            "combined_spend": spend + temp_spend,
         })
 
     mpg_summary = report.get("mpg_summary_by_vehicle", {})
@@ -624,7 +634,9 @@ def generate_report():
 
     return render_template("report.html",
                            group_data=group_data,
-                           grand_total=grand_total,
+                           grand_total=vehicle_grand_total + temp_grand_total,
+                           vehicle_grand_total=vehicle_grand_total,
+                           temp_grand_total=temp_grand_total,
                            total_flagged=total_flagged,
                            total_approved=total_approved,
                            total_denied=total_denied,
