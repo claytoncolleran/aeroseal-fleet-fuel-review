@@ -902,6 +902,233 @@ def backfill_equipment(period):
     return jsonify(preview), 200
 
 
+@app.route("/admin/report/mockup/<period>")
+@admin_required
+def generate_report_mockup(period):
+    """Simulated consolidated report. Re-runs anomaly detection in memory
+    against the saved Corpay upload for a period, then renders the report
+    with all flagged transactions (vehicle + equipment) marked as
+    acknowledged, to preview what the report would have looked like if the
+    current flag set had been in place. Does not touch the database,
+    decisions, or submissions."""
+    upload_path = os.path.join(get_review_dir(period), "corpay_upload.xlsx")
+    if not os.path.exists(upload_path):
+        return (f"Corpay upload not found at {upload_path}. "
+                 f"Mockup needs the original Corpay spreadsheet on disk."), 404
+
+    # Load current flag settings so the mockup reflects what the system
+    # would produce today.
+    flag_settings = None
+    if USE_DB:
+        flag_settings = {
+            "global": database.db_get_global_settings(),
+            "groups": database.db_get_all_group_overrides(),
+        }
+
+    sys.path.insert(0, TOOLS_DIR)
+    from anomaly_detection import run as run_anomaly
+    import tempfile
+    with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as tf:
+        temp_output = tf.name
+    try:
+        report = run_anomaly(
+            corpay_file=upload_path,
+            baselines_file=BASELINES_FILE,
+            output_file=temp_output,
+            flag_settings=flag_settings,
+        )
+    finally:
+        try:
+            os.unlink(temp_output)
+        except OSError:
+            pass
+
+    # Simulate all flagged decisions as acknowledged
+    decisions = {}
+    for t in report.get("transactions", []):
+        if t.get("flag_count", 0) > 0:
+            g = t["fleet_group"]
+            txn_key = f"{t['vehicle_name']}_{t['transaction_date']}_{t['transaction_time']}"
+            decisions.setdefault(g, {})[txn_key] = {
+                "action": "approve",
+                "reason": "",
+                "reviewer": g,
+                "timestamp": datetime.now().isoformat(),
+            }
+    for t in report.get("equipment_cards", []):
+        if t.get("flag_count", 0) > 0:
+            g = t["fleet_group"]
+            txn_key = f"EQUIP_{t.get('card_no') or t.get('cardholder')}_{t['transaction_date']}_{t['transaction_time']}"
+            decisions.setdefault(g, {})[txn_key] = {
+                "action": "approve",
+                "reason": "",
+                "reviewer": g,
+                "timestamp": datetime.now().isoformat(),
+            }
+
+    # Simulate submission records so every group shows as submitted
+    all_groups = set(report.get("group_summary", {}).keys())
+    for t in report.get("equipment_cards", []):
+        if t.get("fleet_group"):
+            all_groups.add(t["fleet_group"])
+    for t in report.get("temporary_cards", []):
+        if t.get("fleet_group"):
+            all_groups.add(t["fleet_group"])
+    submitted_at = datetime.now().isoformat()
+    for g in all_groups:
+        decisions.setdefault(g, {})["_submission"] = {
+            "manager_name": g,
+            "submitted_by": f"(simulated) {g}",
+            "submitted_at": submitted_at,
+            "status": "submitted",
+        }
+
+    # Build the same context that generate_report() builds, but from the
+    # in-memory report + simulated decisions above.
+    groups = sorted(report.get("group_summary", {}).keys())
+
+    temp_by_group = {}
+    for t in report.get("temporary_cards", []):
+        g = t.get("fleet_group")
+        temp_by_group[g] = temp_by_group.get(g, 0) + (t.get("net_price") or 0)
+
+    equipment_by_group = {}
+    equipment_flag_count_global = 0
+    for t in report.get("equipment_cards", []):
+        g = t.get("fleet_group")
+        equipment_by_group[g] = equipment_by_group.get(g, 0) + (t.get("net_price") or 0)
+        if t.get("flag_count", 0) > 0:
+            equipment_flag_count_global += 1
+
+    all_groups_sorted = sorted(set(groups) | set(temp_by_group.keys()) | set(equipment_by_group.keys()) - {None})
+
+    group_data = []
+    vehicle_grand_total = 0
+    temp_grand_total = 0
+    equipment_grand_total = 0
+    total_flagged = 0
+    total_approved = 0
+    total_denied = 0
+    total_equip_flagged = 0
+    total_equip_approved = 0
+    total_equip_denied = 0
+
+    for g in all_groups_sorted:
+        g_summary = report.get("group_summary", {}).get(g, {})
+        g_decisions = decisions.get(g, {})
+        submission = g_decisions.get("_submission")
+        spend = g_summary.get("total_spend", 0)
+        temp_spend = temp_by_group.get(g, 0)
+        equipment_spend = equipment_by_group.get(g, 0)
+        vehicle_grand_total += spend
+        temp_grand_total += temp_spend
+        equipment_grand_total += equipment_spend
+
+        g_txns = [t for t in report.get("transactions", []) if t["fleet_group"] == g]
+        flagged = []
+        for t in g_txns:
+            if t["flag_count"] > 0:
+                txn_key = f"{t['vehicle_name']}_{t['transaction_date']}_{t['transaction_time']}"
+                decision = g_decisions.get(txn_key, {})
+                flagged.append({**t, "decision": decision})
+
+        approved = sum(1 for f in flagged if f["decision"].get("action") == "approve")
+        denied = sum(1 for f in flagged if f["decision"].get("action") == "deny")
+        total_flagged += len(flagged)
+        total_approved += approved
+        total_denied += denied
+
+        g_equipment = [t for t in report.get("equipment_cards", []) if t["fleet_group"] == g]
+        equipment_flagged = []
+        for t in g_equipment:
+            if t.get("flag_count", 0) > 0:
+                txn_key = f"EQUIP_{t.get('card_no') or t.get('cardholder')}_{t['transaction_date']}_{t['transaction_time']}"
+                decision = g_decisions.get(txn_key, {})
+                equipment_flagged.append({**t, "decision": decision})
+
+        equip_approved = sum(1 for f in equipment_flagged if f["decision"].get("action") == "approve")
+        equip_denied = sum(1 for f in equipment_flagged if f["decision"].get("action") == "deny")
+        total_equip_flagged += len(equipment_flagged)
+        total_equip_approved += equip_approved
+        total_equip_denied += equip_denied
+
+        group_data.append({
+            "name": g,
+            "summary": g_summary,
+            "submission": submission,
+            "flagged": flagged,
+            "denied_items": [f for f in flagged if f["decision"].get("action") == "deny"],
+            "approved": approved,
+            "denied": denied,
+            "equipment_flagged": equipment_flagged,
+            "equipment_denied_items": [f for f in equipment_flagged if f["decision"].get("action") == "deny"],
+            "equipment_approved": equip_approved,
+            "equipment_denied": equip_denied,
+            "equipment_flag_count": len(equipment_flagged),
+            "spend": spend,
+            "temp_spend": temp_spend,
+            "equipment_spend": equipment_spend,
+            "combined_spend": spend + temp_spend + equipment_spend,
+        })
+
+    mpg_summary = report.get("mpg_summary_by_vehicle", {})
+    flagged_vehicles = {k: v for k, v in mpg_summary.items() if v.get("flagged")}
+
+    equipment_total_count = len(report.get("equipment_cards", []))
+    if equipment_total_count == 0:
+        equipment_review_status = "No equipment transactions this period"
+    elif equipment_flag_count_global == 0:
+        equipment_review_status = "No flags raised (all fills below threshold, no data-quality issues)"
+    else:
+        equipment_review_status = (f"Flag-reviewed by fleet manager "
+                                    f"({equipment_flag_count_global} of {equipment_total_count} flagged)")
+
+    spend_categories = [
+        {
+            "label": "Vehicle Cards",
+            "txn_count": report.get("summary", {}).get("total_vehicle_transactions_analyzed", 0),
+            "spend": vehicle_grand_total,
+            "review_status": "Reviewed by fleet manager (flag review + acknowledgment)",
+            "status_tone": "ok",
+        },
+        {
+            "label": "Temporary Cards",
+            "txn_count": len(report.get("temporary_cards", [])),
+            "spend": temp_grand_total,
+            "review_status": "Reviewed by fleet manager (every transaction acknowledged)",
+            "status_tone": "ok",
+        },
+        {
+            "label": "Equipment / Unit Cards",
+            "txn_count": equipment_total_count,
+            "spend": equipment_grand_total,
+            "review_status": equipment_review_status,
+            "status_tone": "ok",
+        },
+    ]
+
+    return render_template("report.html",
+                           group_data=group_data,
+                           grand_total=vehicle_grand_total + temp_grand_total + equipment_grand_total,
+                           vehicle_grand_total=vehicle_grand_total,
+                           temp_grand_total=temp_grand_total,
+                           equipment_grand_total=equipment_grand_total,
+                           spend_categories=spend_categories,
+                           total_flagged=total_flagged,
+                           total_approved=total_approved,
+                           total_denied=total_denied,
+                           total_equip_flagged=total_equip_flagged,
+                           total_equip_approved=total_equip_approved,
+                           total_equip_denied=total_equip_denied,
+                           summary=report.get("summary", {}),
+                           mpg_summary=mpg_summary,
+                           flagged_vehicles=flagged_vehicles,
+                           active_review=None,
+                           generated_at=datetime.now().strftime("%Y-%m-%d %H:%M"),
+                           is_mockup=True,
+                           mockup_period=period)
+
+
 @app.route("/api/admin-approve", methods=["POST"])
 @admin_required
 def admin_approve():

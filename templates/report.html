@@ -206,14 +206,34 @@
 <body>
 <div class="report">
 
+  {% if is_mockup %}
+  <div style="background: linear-gradient(135deg, #FFF4E0 0%, #FFEEC4 100%); border: 2px solid #C07A1F; border-radius: 8px; padding: 16px 20px; margin-bottom: 20px;">
+    <div style="display: flex; gap: 12px; align-items: flex-start;">
+      <div style="flex-shrink: 0; width: 28px; height: 28px; border-radius: 50%; background: #C07A1F; color: #fff; display: flex; align-items: center; justify-content: space-around; font-weight: 700;">!</div>
+      <div>
+        <strong style="font-size: 14px; color: #8C5A00; text-transform: uppercase; letter-spacing: 0.04em;">Mockup &middot; Not Saved to Database</strong>
+        <p style="font-size: 13px; color: #5A6B7B; margin-top: 4px; line-height: 1.5;">
+          This is a simulated view of what the <strong>{{ mockup_period }}</strong> report would have looked like
+          if the equipment card flag review (E1 &amp; E2) had been in place during the original review cycle.
+          Anomaly detection was re-run in memory against the saved Corpay upload. All flagged transactions are
+          simulated as acknowledged by each fleet manager. The real {{ mockup_period }} report, decisions, and
+          submission signatures in the database are not affected.
+        </p>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
   <!-- Action Bar (screen only) -->
   <div class="action-bar no-print">
     <div>
       <a href="/admin" style="font-size: 13px; color: var(--aeroseal-sapphire); text-decoration: none;">&larr; Back to Admin</a>
     </div>
     <div style="display: flex; gap: 10px; align-items: center;">
+      {% if not is_mockup %}
       <input type="text" id="admin-name" class="admin-input" placeholder="Fleet Admin Name">
       <button class="btn btn-primary" onclick="adminApprove(this)">Acknowledge &amp; Sign</button>
+      {% endif %}
       <button class="btn btn-outline" onclick="window.print()">Download PDF</button>
     </div>
   </div>
