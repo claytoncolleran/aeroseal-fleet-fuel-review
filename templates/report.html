@@ -247,7 +247,7 @@
     <div class="report-meta">
       <strong>Generated:</strong> {{ generated_at }}<br>
       <strong>Period:</strong> {{ summary.get('fuel_type_medians', {}).keys()|list|length }} fuel types analyzed<br>
-      <strong>Transactions:</strong> {{ summary.get('total_vehicle_transactions_analyzed', 0) }}
+      <strong>Transactions:</strong> {{ spend_categories | sum(attribute='txn_count') }}
     </div>
   </div>
 
@@ -347,7 +347,7 @@
       {% endfor %}
       <tr class="total-row">
         <td>Grand Total</td>
-        <td>{{ summary.get('total_vehicle_transactions_analyzed', 0) }}</td>
+        <td>{{ spend_categories | sum(attribute='txn_count') }}</td>
         <td>{{ total_flagged + total_equip_flagged }}</td>
         <td>{{ total_approved + total_equip_approved }}</td>
         <td>{{ total_denied + total_equip_denied }}</td>
