@@ -260,9 +260,9 @@
       <div class="summary-sub">All Corpay fuel spend this period<br>(see breakdown below)</div>
     </div>
     <div class="summary-box">
-      <div class="summary-value">{{ summary.get('total_vehicle_transactions_analyzed', 0) }}</div>
-      <div class="summary-label">Vehicle Transactions</div>
-      <div class="summary-sub">Matched to Fleetio, flag-reviewed</div>
+      <div class="summary-value">{{ spend_categories | sum(attribute='txn_count') }}</div>
+      <div class="summary-label">Transactions</div>
+      <div class="summary-sub">Vehicle, temporary, and equipment cards</div>
     </div>
     <div class="summary-box accent">
       <div class="summary-value">{{ total_approved }}</div>
