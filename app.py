@@ -4,8 +4,8 @@ Aeroseal-branded web interface for reviewing fuel transactions and anomalies.
 Supports monthly review cycles with upload, process, notify, and archive.
 """
 
-from flask import (Flask, render_template, request, jsonify, redirect,
-                   url_for, session, flash, send_file)
+from flask import (Flask, render_template, render_template_string, request,
+                   jsonify, redirect, url_for, session, flash, send_file)
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 from functools import wraps
@@ -902,19 +902,60 @@ def backfill_equipment(period):
     return jsonify(preview), 200
 
 
-@app.route("/admin/report/mockup/<period>")
+@app.route("/admin/report/mockup/<period>", methods=["GET", "POST"])
 @admin_required
 def generate_report_mockup(period):
     """Simulated consolidated report. Re-runs anomaly detection in memory
-    against the saved Corpay upload for a period, then renders the report
-    with all flagged transactions (vehicle + equipment) marked as
-    acknowledged, to preview what the report would have looked like if the
-    current flag set had been in place. Does not touch the database,
-    decisions, or submissions."""
-    upload_path = os.path.join(get_review_dir(period), "corpay_upload.xlsx")
-    if not os.path.exists(upload_path):
-        return (f"Corpay upload not found at {upload_path}. "
-                 f"Mockup needs the original Corpay spreadsheet on disk."), 404
+    against a Corpay upload for a period, then renders the report with all
+    flagged transactions (vehicle + equipment) marked as acknowledged, to
+    preview what the report would have looked like if the current flag set
+    had been in place. Does not touch the database, decisions, or
+    submissions.
+
+    Tries the saved Corpay file on disk first. If that's not available
+    (e.g., the file predates the persistent disk setup), shows an upload
+    form so the admin can supply the original Corpay xlsx from their
+    computer."""
+    saved_path = os.path.join(get_review_dir(period), "corpay_upload.xlsx")
+    uploaded_file = request.files.get("corpay_file") if request.method == "POST" else None
+
+    if uploaded_file and uploaded_file.filename:
+        import tempfile as _tf
+        tf = _tf.NamedTemporaryFile(suffix=".xlsx", delete=False)
+        tf.close()
+        uploaded_file.save(tf.name)
+        corpay_to_process = tf.name
+        cleanup_corpay = True
+    elif os.path.exists(saved_path):
+        corpay_to_process = saved_path
+        cleanup_corpay = False
+    else:
+        # Show upload form
+        return render_template_string("""
+{% extends "base.html" %}
+{% block title %}Mockup Report, Upload Corpay{% endblock %}
+{% block content %}
+<div class="page-header">
+  <p style="margin-bottom: 4px;"><a href="/admin">&larr; Back to Admin</a></p>
+  <h1>Mockup Report, {{ period }}</h1>
+  <p>Upload the original Corpay spreadsheet for this period to preview the report.</p>
+</div>
+<div class="card" style="padding: 24px; max-width: 640px;">
+  <div class="section-banner banner-info" style="margin-bottom: 20px;">
+    The Corpay file for <strong>{{ period }}</strong> isn't available on this server's persistent disk
+    (looked at <code style="font-size: 11px;">{{ expected_path }}</code>). Upload the original
+    spreadsheet below and this page will simulate what the {{ period }} report would have looked like
+    with the new equipment flag review (E1 and E2) in place. Nothing is saved to the database.
+  </div>
+  <form method="POST" enctype="multipart/form-data">
+    <label style="display: block; font-weight: 600; font-size: 14px; color: var(--aeroseal-midnight-blue); margin-bottom: 8px;">Corpay spreadsheet (.xlsx)</label>
+    <input type="file" name="corpay_file" accept=".xlsx" required
+           style="display: block; font-size: 13px; padding: 12px; border: 2px dashed var(--aeroseal-titanium); border-radius: 6px; width: 100%; margin-bottom: 16px; background: #FAFBFC;">
+    <button type="submit" class="btn-submit" style="padding: 10px 20px;">Generate Mockup</button>
+  </form>
+</div>
+{% endblock %}
+""", period=period, expected_path=saved_path)
 
     # Load current flag settings so the mockup reflects what the system
     # would produce today.
@@ -932,16 +973,19 @@ def generate_report_mockup(period):
         temp_output = tf.name
     try:
         report = run_anomaly(
-            corpay_file=upload_path,
+            corpay_file=corpay_to_process,
             baselines_file=BASELINES_FILE,
             output_file=temp_output,
             flag_settings=flag_settings,
         )
     finally:
-        try:
-            os.unlink(temp_output)
-        except OSError:
-            pass
+        for p in (temp_output, corpay_to_process if cleanup_corpay else None):
+            if not p:
+                continue
+            try:
+                os.unlink(p)
+            except OSError:
+                pass
 
     # Simulate all flagged decisions as acknowledged
     decisions = {}
