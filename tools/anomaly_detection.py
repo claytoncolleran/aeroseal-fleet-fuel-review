@@ -890,6 +890,32 @@ def run(corpay_file=None, baselines_file=None, output_file=None, flag_settings=N
             "fleet_group": infer_group_from_subaccount(row.get("Sub Account")),
         })
 
+    # ── Build equipment card records ──
+    # UNIT/EQUIPMENT cards aren't matched to a specific Fleetio vehicle and
+    # don't go through flag review, but the money is real and accounting needs
+    # to see it in the consolidated report.
+    equipment_records = []
+    for row in equipment_txns:
+        equipment_records.append({
+            "transaction_date": row.get("Transaction Date - Date"),
+            "transaction_time": row.get("Transaction Date - Time"),
+            "cardholder": row.get("Cardholder Full Name"),
+            "driver": row.get("Spender") or row.get("Cardholder Full Name"),
+            "vendor": row.get("Vendor") or row.get("Description"),
+            "location": row.get("Address"),
+            "state": row.get("State"),
+            "status": row.get("Status"),
+            "gallons": safe_float(row.get("Unit/Gallons")),
+            "gross_price": safe_float(row.get("Gross Price")),
+            "net_price": safe_float(row.get("Net Price")),
+            "gross_ppg": safe_float(row.get("Gross PPU/PPG")),
+            "product": row.get("Product Description"),
+            "odometer": safe_float(row.get("Odometer")),
+            "card_no": row.get("Card No."),
+            "sub_account": row.get("Sub Account"),
+            "fleet_group": infer_group_from_subaccount(row.get("Sub Account")),
+        })
+
     # ── Group summary ──
     group_summary = {}
     for txn in all_records:
@@ -964,6 +990,7 @@ def run(corpay_file=None, baselines_file=None, output_file=None, flag_settings=N
         "group_summary": group_summary,
         "transactions": all_records,
         "temporary_cards": temp_records,
+        "equipment_cards": equipment_records,
         "declined_transactions": declined_records,
     }
 

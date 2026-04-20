@@ -617,6 +617,7 @@ def db_build_report(period):
 
         transactions = []
         temporary_cards = []
+        equipment_cards = []
         declined_transactions = []
 
         for row in txn_rows:
@@ -645,6 +646,8 @@ def db_build_report(period):
             card_type = row[18] or "vehicle"
             if card_type == "temporary":
                 temporary_cards.append(txn)
+            elif card_type == "equipment":
+                equipment_cards.append(txn)
             elif card_type == "declined":
                 declined_transactions.append(txn)
             else:
@@ -730,6 +733,7 @@ def db_build_report(period):
             "flags_by_type": flags_by_type,
             "vehicles_flagged_for_mpg": [v for v, m in mpg_summary.items() if m.get("flagged")],
             "temporary_card_transactions": len(temporary_cards),
+            "equipment_transactions_excluded": len(equipment_cards),
             "declined_transactions": len(declined_transactions),
         }
 
@@ -738,6 +742,7 @@ def db_build_report(period):
             "group_summary": group_summary,
             "transactions": transactions,
             "temporary_cards": temporary_cards,
+            "equipment_cards": equipment_cards,
             "declined_transactions": declined_transactions,
             "mpg_summary_by_vehicle": mpg_summary,
         }

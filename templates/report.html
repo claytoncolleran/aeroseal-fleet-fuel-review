@@ -79,7 +79,29 @@
     }
     .spend-breakdown .veh { color: #5A6B7B; }
     .spend-breakdown .tmp { color: #6B7A1F; }
+    .spend-breakdown .eqp { color: #8C5A00; }
     .spend-breakdown .sep { color: #B0B8C0; margin: 0 4px; }
+
+    /* Spend Breakdown table (review status section) */
+    .breakdown-table td { vertical-align: middle; }
+    .breakdown-cat {
+      display: inline-flex; align-items: center; gap: 8px;
+      font-weight: 600;
+    }
+    .cat-dot {
+      display: inline-block; width: 10px; height: 10px;
+      border-radius: 50%; flex-shrink: 0;
+    }
+    .cat-dot.veh { background: #5A6B7B; }
+    .cat-dot.tmp { background: #8A9A2B; }
+    .cat-dot.eqp { background: #C07A1F; }
+    .review-pill {
+      display: inline-block; font-size: 10px; font-weight: 600;
+      padding: 2px 8px; border-radius: 10px;
+      text-transform: uppercase; letter-spacing: 0.04em;
+    }
+    .review-pill.ok { background: #E8F5E9; color: #2E7D32; }
+    .review-pill.warn { background: #FFF4E0; color: #8C5A00; }
 
     /* Summary boxes */
     .summary-grid {
@@ -214,16 +236,13 @@
   <div class="summary-grid">
     <div class="summary-box">
       <div class="summary-value">${{ "{:,.0f}".format(grand_total) }}</div>
-      <div class="summary-label">Grand Total Spend</div>
-      <div class="summary-sub">
-        <span class="veh">${{ "{:,.0f}".format(vehicle_grand_total) }} vehicle</span>
-        +
-        <span class="tmp">${{ "{:,.0f}".format(temp_grand_total) }} temp cards</span>
-      </div>
+      <div class="summary-label">Total Fleet Spend</div>
+      <div class="summary-sub">All Corpay fuel spend this period<br>(see breakdown below)</div>
     </div>
     <div class="summary-box">
       <div class="summary-value">{{ summary.get('total_vehicle_transactions_analyzed', 0) }}</div>
-      <div class="summary-label">Total Transactions</div>
+      <div class="summary-label">Vehicle Transactions</div>
+      <div class="summary-sub">Matched to Fleetio, flag-reviewed</div>
     </div>
     <div class="summary-box accent">
       <div class="summary-value">{{ total_approved }}</div>
@@ -234,6 +253,46 @@
       <div class="summary-label">With Comments</div>
     </div>
   </div>
+
+  <!-- Spend Breakdown by Category -->
+  <h2>Spend Breakdown by Category</h2>
+  <table class="breakdown-table">
+    <thead>
+      <tr>
+        <th>Category</th>
+        <th>Transactions</th>
+        <th style="text-align: right;">Spend</th>
+        <th style="text-align: right;">% of Total</th>
+        <th>Review Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for c in spend_categories %}
+      <tr>
+        <td>
+          <span class="breakdown-cat">
+            <span class="cat-dot {% if loop.index == 1 %}veh{% elif loop.index == 2 %}tmp{% else %}eqp{% endif %}"></span>
+            {{ c.label }}
+          </span>
+        </td>
+        <td>{{ c.txn_count }}</td>
+        <td style="text-align: right;"><strong>${{ "{:,.2f}".format(c.spend) }}</strong></td>
+        <td style="text-align: right;">{% if grand_total > 0 %}{{ "%.1f"|format(c.spend / grand_total * 100) }}%{% else %}—{% endif %}</td>
+        <td>
+          <span class="review-pill {{ c.status_tone }}">{% if c.status_tone == 'ok' %}Reviewed{% else %}Not Reviewed{% endif %}</span>
+          <span style="font-size: 10px; color: #5A6B7B; margin-left: 6px;">{{ c.review_status }}</span>
+        </td>
+      </tr>
+      {% endfor %}
+      <tr class="total-row">
+        <td><strong>Total Fleet Spend</strong></td>
+        <td>{{ spend_categories | sum(attribute='txn_count') }}</td>
+        <td style="text-align: right;"><strong>${{ "{:,.2f}".format(grand_total) }}</strong></td>
+        <td style="text-align: right;">100.0%</td>
+        <td></td>
+      </tr>
+    </tbody>
+  </table>
 
   <!-- Spend by Fleet Group -->
   <h2>Spend by Fleet Group</h2>
@@ -261,14 +320,11 @@
         <td style="text-align: right;">
           <span class="spend-primary">${{ "{:,.2f}".format(g.combined_spend) }}</span>
           <span class="spend-breakdown">
-            <span class="veh">${{ "{:,.2f}".format(g.spend) }} vehicle</span>
-            {% if g.temp_spend > 0 %}
-              <span class="sep">+</span>
-              <span class="tmp">${{ "{:,.2f}".format(g.temp_spend) }} temp</span>
-            {% else %}
-              <span class="sep">+</span>
-              <span style="color: #B0B8C0;">$0 temp</span>
-            {% endif %}
+            <span class="veh">${{ "{:,.2f}".format(g.spend) }} veh</span>
+            <span class="sep">·</span>
+            <span class="tmp">${{ "{:,.2f}".format(g.temp_spend) }} temp</span>
+            <span class="sep">·</span>
+            <span class="eqp">${{ "{:,.2f}".format(g.equipment_spend) }} equip</span>
           </span>
         </td>
         <td>{{ g.submission.get('manager_name', '—') if g.submission else '—' }}</td>
@@ -284,9 +340,11 @@
         <td style="text-align: right;">
           <span class="spend-primary" style="font-size: 13px;">${{ "{:,.2f}".format(grand_total) }}</span>
           <span class="spend-breakdown">
-            <span class="veh">${{ "{:,.2f}".format(vehicle_grand_total) }} vehicle</span>
-            <span class="sep">+</span>
+            <span class="veh">${{ "{:,.2f}".format(vehicle_grand_total) }} veh</span>
+            <span class="sep">·</span>
             <span class="tmp">${{ "{:,.2f}".format(temp_grand_total) }} temp</span>
+            <span class="sep">·</span>
+            <span class="eqp">${{ "{:,.2f}".format(equipment_grand_total) }} equip</span>
           </span>
         </td>
         <td colspan="2"></td>
@@ -294,7 +352,7 @@
     </tbody>
   </table>
   <p style="font-size: 11px; color: #5A6B7B; font-style: italic; margin-top: -8px;">
-    Total Spend reflects combined vehicle card and temporary card spend per fleet group. Breakdown shown beneath each total.
+    Total Spend reflects all Corpay spend per fleet group (vehicle, temporary, and equipment cards). Breakdown shown beneath each total. Equipment spend is reported but not individually reviewed.
   </p>
 
   <!-- Denied Items Detail -->
@@ -342,14 +400,17 @@
     </tbody>
   </table>
 
-  <!-- Excluded Items -->
-  <h2>Excluded from Analysis</h2>
+  <!-- Excluded from Flag Analysis -->
+  <h2>Excluded from Flag Analysis</h2>
+  <p style="font-size: 11px; color: #5A6B7B; margin-bottom: 8px;">
+    The following categories are included in Total Fleet Spend above but do not go through the 6-flag anomaly detection pipeline.
+  </p>
   <table>
     <thead><tr><th>Category</th><th>Count</th><th>Notes</th></tr></thead>
     <tbody>
-      <tr><td>Equipment Card Transactions</td><td>{{ summary.get('equipment_transactions_excluded', 0) }}</td><td>UNIT/EQUIPMENT cards, out of scope for vehicle analysis</td></tr>
-      <tr><td>Temporary Card Transactions</td><td>{{ summary.get('temporary_card_transactions', 0) }}</td><td>Included in Total Spend above, reviewed by managers separately</td></tr>
-      <tr><td>Declined Transactions</td><td>{{ summary.get('declined_transactions', 0) }}</td><td>No fuel dispensed, acknowledged by managers</td></tr>
+      <tr><td>Equipment / Unit Card Transactions</td><td>{{ summary.get('equipment_transactions_excluded', 0) }}</td><td>No assigned vehicle, cannot run vehicle-level flags (MPG, odometer, etc.)</td></tr>
+      <tr><td>Temporary Card Transactions</td><td>{{ summary.get('temporary_card_transactions', 0) }}</td><td>Reviewed by fleet managers in a separate workflow</td></tr>
+      <tr><td>Declined Transactions</td><td>{{ summary.get('declined_transactions', 0) }}</td><td>No fuel dispensed, $0 impact on totals</td></tr>
     </tbody>
   </table>
 

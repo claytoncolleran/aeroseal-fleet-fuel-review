@@ -92,8 +92,9 @@ def get_active_review():
 def load_report(period=None):
     """Load anomaly report for a period (defaults to active review).
     Tries database first when USE_DB is True, falls back to JSON file."""
-    empty_report = {"transactions": [], "temporary_cards": [], "declined_transactions": [],
-                     "group_summary": {}, "summary": {}, "mpg_summary_by_vehicle": {}}
+    empty_report = {"transactions": [], "temporary_cards": [], "equipment_cards": [],
+                     "declined_transactions": [], "group_summary": {}, "summary": {},
+                     "mpg_summary_by_vehicle": {}}
     if not period:
         active = get_active_review()
         if not active:
@@ -582,13 +583,28 @@ def generate_report():
     active = get_active_review()
 
     temp_by_group = {}
+    temp_count_by_group = {}
     for t in report.get("temporary_cards", []):
         g = t.get("fleet_group")
         temp_by_group[g] = temp_by_group.get(g, 0) + (t.get("net_price") or 0)
+        temp_count_by_group[g] = temp_count_by_group.get(g, 0) + 1
+
+    equipment_by_group = {}
+    equipment_count_by_group = {}
+    for t in report.get("equipment_cards", []):
+        g = t.get("fleet_group")
+        equipment_by_group[g] = equipment_by_group.get(g, 0) + (t.get("net_price") or 0)
+        equipment_count_by_group[g] = equipment_count_by_group.get(g, 0) + 1
+
+    # Include fleet groups that only have equipment/temp spend but no vehicle txns
+    all_groups = set(groups) | set(temp_by_group.keys()) | set(equipment_by_group.keys())
+    all_groups.discard(None)
+    groups = sorted(all_groups)
 
     group_data = []
     vehicle_grand_total = 0
     temp_grand_total = 0
+    equipment_grand_total = 0
     total_flagged = 0
     total_approved = 0
     total_denied = 0
@@ -599,8 +615,10 @@ def generate_report():
         submission = g_decisions.get("_submission")
         spend = g_summary.get("total_spend", 0)
         temp_spend = temp_by_group.get(g, 0)
+        equipment_spend = equipment_by_group.get(g, 0)
         vehicle_grand_total += spend
         temp_grand_total += temp_spend
+        equipment_grand_total += equipment_spend
 
         g_txns = [t for t in report.get("transactions", []) if t["fleet_group"] == g]
         flagged = []
@@ -626,17 +644,44 @@ def generate_report():
             "denied": denied,
             "spend": spend,
             "temp_spend": temp_spend,
-            "combined_spend": spend + temp_spend,
+            "equipment_spend": equipment_spend,
+            "combined_spend": spend + temp_spend + equipment_spend,
         })
 
     mpg_summary = report.get("mpg_summary_by_vehicle", {})
     flagged_vehicles = {k: v for k, v in mpg_summary.items() if v.get("flagged")}
 
+    spend_categories = [
+        {
+            "label": "Vehicle Cards",
+            "txn_count": report.get("summary", {}).get("total_vehicle_transactions_analyzed", 0),
+            "spend": vehicle_grand_total,
+            "review_status": "Reviewed by fleet manager (flag review + acknowledgment)",
+            "status_tone": "ok",
+        },
+        {
+            "label": "Temporary Cards",
+            "txn_count": len(report.get("temporary_cards", [])),
+            "spend": temp_grand_total,
+            "review_status": "Reviewed by fleet manager (separate workflow)",
+            "status_tone": "ok",
+        },
+        {
+            "label": "Equipment / Unit Cards",
+            "txn_count": len(report.get("equipment_cards", [])),
+            "spend": equipment_grand_total,
+            "review_status": "Not reviewed (no assigned vehicle, outside review scope)",
+            "status_tone": "warn",
+        },
+    ]
+
     return render_template("report.html",
                            group_data=group_data,
-                           grand_total=vehicle_grand_total + temp_grand_total,
+                           grand_total=vehicle_grand_total + temp_grand_total + equipment_grand_total,
                            vehicle_grand_total=vehicle_grand_total,
                            temp_grand_total=temp_grand_total,
+                           equipment_grand_total=equipment_grand_total,
+                           spend_categories=spend_categories,
                            total_flagged=total_flagged,
                            total_approved=total_approved,
                            total_denied=total_denied,
@@ -645,6 +690,114 @@ def generate_report():
                            flagged_vehicles=flagged_vehicles,
                            active_review=active,
                            generated_at=datetime.now().strftime("%Y-%m-%d %H:%M"))
+
+
+@app.route("/admin/backfill-equipment/<period>", methods=["GET", "POST"])
+@admin_required
+def backfill_equipment(period):
+    """One-off backfill: read the saved Corpay upload for a review period,
+    extract UNIT/EQUIPMENT card rows (whose dollar data was previously dropped),
+    and insert them into the transactions table with card_type='equipment'.
+
+    Idempotent: re-running will skip if equipment rows already exist for the
+    period. GET returns a preview; POST executes."""
+    if not USE_DB:
+        return jsonify({"status": "error",
+                         "message": "Backfill requires DATABASE_URL (production only)."}), 400
+
+    review = database.db_get_review(period)
+    if not review:
+        return jsonify({"status": "error", "message": f"No review found for {period}"}), 404
+    review_id = review["id"]
+
+    upload_path = os.path.join(get_review_dir(period), "corpay_upload.xlsx")
+    if not os.path.exists(upload_path):
+        return jsonify({"status": "error",
+                         "message": f"Corpay upload not found at {upload_path}"}), 404
+
+    sys.path.insert(0, TOOLS_DIR)
+    from anomaly_detection import (load_corpay, safe_float,
+                                     infer_group_from_subaccount)
+
+    rows = load_corpay(corpay_file=upload_path)
+    equipment_records = []
+    for row in rows:
+        first_name = row.get("Cardholder First Name")
+        status = row.get("Status", "")
+        if first_name not in ("UNIT", "EQUIPMENT"):
+            continue
+        if status == "DECLINED":
+            continue
+        equipment_records.append({
+            "transaction_date": row.get("Transaction Date - Date"),
+            "transaction_time": row.get("Transaction Date - Time"),
+            "vehicle_name": None,
+            "fleet_group": infer_group_from_subaccount(row.get("Sub Account")),
+            "cardholder": row.get("Cardholder Full Name"),
+            "driver": row.get("Spender") or row.get("Cardholder Full Name"),
+            "vendor": row.get("Vendor") or row.get("Description"),
+            "location": row.get("Address"),
+            "state": row.get("State"),
+            "status": row.get("Status"),
+            "gallons": safe_float(row.get("Unit/Gallons")),
+            "gross_price": safe_float(row.get("Gross Price")),
+            "net_price": safe_float(row.get("Net Price")),
+            "gross_ppg": safe_float(row.get("Gross PPU/PPG")),
+            "product": row.get("Product Description"),
+            "odometer": safe_float(row.get("Odometer")),
+            "card_no": row.get("Card No."),
+            "sub_account": row.get("Sub Account"),
+            "card_type": "equipment",
+            "flag_count": 0,
+            "flags": [],
+        })
+
+    total_spend = sum((r.get("net_price") or 0) for r in equipment_records)
+    spend_by_group = {}
+    for r in equipment_records:
+        g = r["fleet_group"]
+        spend_by_group[g] = spend_by_group.get(g, 0) + (r.get("net_price") or 0)
+
+    # Check for existing equipment rows (idempotency check)
+    with database.get_db() as conn:
+        cur = conn.cursor()
+        cur.execute(
+            "SELECT COUNT(*) FROM transactions WHERE review_id = %s AND card_type = %s",
+            (review_id, "equipment")
+        )
+        existing_count = cur.fetchone()[0]
+
+    preview = {
+        "period": period,
+        "review_id": review_id,
+        "upload_path": upload_path,
+        "equipment_rows_found": len(equipment_records),
+        "total_equipment_spend": round(total_spend, 2),
+        "spend_by_group": {k: round(v, 2) for k, v in sorted(spend_by_group.items())},
+        "existing_equipment_rows_in_db": existing_count,
+    }
+
+    if request.method == "GET":
+        preview["status"] = "preview"
+        preview["next_step"] = f"POST to this same URL to insert {len(equipment_records)} rows"
+        return jsonify(preview), 200
+
+    if existing_count > 0:
+        preview["status"] = "skipped"
+        preview["message"] = (f"{existing_count} equipment rows already exist for {period}. "
+                               "No changes made. Delete existing rows first if you want to re-insert.")
+        return jsonify(preview), 200
+
+    if not equipment_records:
+        preview["status"] = "noop"
+        preview["message"] = "No equipment rows found in the Corpay file."
+        return jsonify(preview), 200
+
+    database.db_insert_transactions(review_id, equipment_records)
+
+    preview["status"] = "inserted"
+    preview["message"] = f"Inserted {len(equipment_records)} equipment rows totaling ${total_spend:,.2f}"
+    return jsonify(preview), 200
 
 
 @app.route("/api/admin-approve", methods=["POST"])
@@ -775,6 +928,7 @@ def create_review():
         if report:
             all_txns = report.get("transactions", [])
             temp_cards = report.get("temporary_cards", [])
+            equipment_cards = report.get("equipment_cards", [])
             declined = report.get("declined_transactions", [])
 
             # Tag card types for DB storage
@@ -784,12 +938,17 @@ def create_review():
                 t["card_type"] = "temporary"
                 t["flag_count"] = 0
                 t["flags"] = []
+            for t in equipment_cards:
+                t["card_type"] = "equipment"
+                t["flag_count"] = 0
+                t["flags"] = []
+                t["vehicle_name"] = None
             for t in declined:
                 t["card_type"] = "declined"
                 t["flag_count"] = 0
                 t["flags"] = []
 
-            database.db_insert_transactions(review_id, all_txns + temp_cards + declined)
+            database.db_insert_transactions(review_id, all_txns + temp_cards + equipment_cards + declined)
 
             # Write vehicle MPG data
             mpg_data = report.get("mpg_summary_by_vehicle", {})
