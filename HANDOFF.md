@@ -10,7 +10,7 @@ Produced by running the [passing-the-torch](https://github.com/claytoncolleran/p
 | **Incoming primary owner** | Matthew Douglas, Fleet Administrator |
 | **Incoming operational stakeholder** | Caleb Severance, Operations Leader, RNC East (inherits review-workflow participation as a fleet manager of the AEROSEAL SUMSC group) |
 | **Handoff scope** | Full transfer of code repo, Render service, PostgreSQL database, custom domain, Resend sending configuration, all environment variables, admin account, and operational responsibility for the monthly review cycle |
-| **Status at handoff** | All core phases complete. First live review (2026-03) completed manager approval phase 2026-04-10 (9 of 9 submitted). System is deployed and operational. One open roadmap item (Fleet Administrator review-notes productionization) remains unshipped. |
+| **Status at handoff** | All core phases complete. First live review (2026-03) completed manager approval phase 2026-04-10 (9 of 9 submitted). Equipment / unit card capture and flag review (E1, E2) shipped 2026-04-20 and are ready for the April 2026 cycle. System is deployed and operational. One open roadmap item (Fleet Administrator review-notes productionization) remains unshipped. |
 | **Ideal handoff target** | Aeroseal-controlled GitHub organization and Aeroseal-controlled Render account. Falling back to Matthew's personal accounts is acceptable; falling back to collaborator-only status on Clayton's personal accounts is the fragile minimum. |
 
 ## 1. What this project is and why it exists
@@ -18,7 +18,7 @@ Produced by running the [passing-the-torch](https://github.com/claytoncolleran/p
 An anomaly-detection and review-routing workflow for Aeroseal's fleet fuel spend. Replaces a manual, spreadsheet-based monthly review with a structured tool that:
 
 - Ingests the monthly Corpay fuel card export
-- Runs six configurable anomaly flags against each transaction and each vehicle
+- Runs configurable anomaly flags against vehicle cards (F1-F6) and equipment / unit cards (E1-E2)
 - Routes flagged transactions to the correct fleet manager for acknowledgement or comment
 - Consolidates manager decisions into a sign-off report for the Fleet Administrator
 - Produces the final accounting handoff
@@ -115,8 +115,11 @@ The earlier terminology was misleading. Managers were not "denying" transactions
 ### JSON fallback for user and decision data
 `db.py` falls back to JSON files on persistent disk if `DATABASE_URL` is not set. This exists for local-dev ergonomics and for disaster recovery. It is not a supported production mode. Production runs on PostgreSQL.
 
-### Corpay 1.0-gallon defaults are excluded
-When no odometer is entered at the pump, Corpay defaults gallons to 1.0 with variable pricing. These are excluded from MPG calculations and Flag 4 (small fill) analysis because they pollute baselines. If fuel patterns change and this exclusion breaks, revisit the logic in `tools/anomaly_detection.py`.
+### Corpay 1.0-gallon defaults are excluded from vehicle analysis, surfaced on equipment
+When no odometer is entered at the pump, Corpay defaults gallons to 1.0 with variable pricing. On vehicle cards these are excluded from MPG calculations and Flag 4 (small fill) analysis because they pollute baselines. On equipment / unit cards the same pattern is surfaced as Flag E2 instead of dropped, because equipment spend isn't averaged into baselines and the pattern is worth flagging for manager review. If fuel patterns change and this logic breaks, revisit `tools/anomaly_detection.py`.
+
+### Equipment cards are flag-reviewed, not force-reviewed (unlike temporary cards)
+Temporary cards force the manager to acknowledge every single transaction, because the goal is to drive temporary card usage to zero by giving each driver a permanent card. Equipment cards have a different goal: they are a legitimate long-term tool, but the concern is that they get misused to fuel vehicles. Flag-based review (E1 on fills > $50, E2 on Corpay 1.0-gal defaults) catches the misuse patterns without burying managers in acknowledgements on every small generator fill. Do not change equipment cards to force-review every transaction without revisiting this rationale.
 
 ### Flag thresholds are configurable per group
 Different fleet groups have different vehicle mixes, fuel types, and use patterns. Global defaults exist, but per-group overrides are supported via `/admin/settings`. Settings apply at processing time, not retroactively. Decide on settings *before* running the review; changing them after upload does not reprocess.
@@ -203,6 +206,8 @@ The stuff that is not in the code and not in CLAUDE.md but that matters when thi
 - **The `decisions` table backward-compatibility note**: do not migrate `action: "approve"` to `action: "acknowledge"` without a data migration script. Multiple places in the codebase assume the old values.
 - **Render's free tier spins down.** This is on the Starter plan (paid) specifically so it does not spin down between uses. If cost becomes a concern and someone downgrades to free, first requests every morning will be slow and may time out before fleet managers can log in.
 - **The Corpay export format has changed at least once during development.** Header row auto-detection exists because of this. If Corpay changes it again, `tools/anomaly_detection.py` `detect_header_row()` is where the fix goes.
+- **The Render persistent disk at `/var/data` may not actually be mounted.** As of 2026-04-20, attempting to read a saved Corpay upload from `/var/data/reviews/<period>/corpay_upload.xlsx` returned path-not-found and the app fell back to the ephemeral local `data/` directory. PostgreSQL is the authoritative store for transactions and decisions, so review data itself is safe, but the original uploaded xlsx files (used by the backfill route and anomaly-detection re-run) may be lost on redeploy. Worth confirming in the Render dashboard that the `fuel-review-data` disk is provisioned and mounted. If it isn't, the `render.yaml` config exists but needs to be applied.
+- **Equipment flag defaults (E1 $50 threshold, E2 enabled) are hardcoded fallbacks in `FLAG_DEFAULTS`.** They apply automatically at upload time, but do not appear in the `flag_settings` table until someone visits `/admin/settings` and clicks Save Defaults. The behavior is identical either way; just a note if you're looking at the DB directly.
 
 ## 9. People
 

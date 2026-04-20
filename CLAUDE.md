@@ -89,14 +89,18 @@ Tables: `users`, `reviews`, `transactions`, `flags`, `vehicle_mpg`, `decisions`,
 ## Anomaly Flags
 All flag thresholds are configurable via `/admin/settings`. Global defaults + per-group overrides stored in `flag_settings` table. Settings must be configured before uploading a spreadsheet (applied at processing time, not retroactively).
 
-| Flag | Level | Default Logic | Configurable |
-|---|---|---|---|
-| F1 — Fuel Efficiency | **Vehicle-level** | Period MPG >20% below baseline | Threshold %, enable/disable |
-| F2 — Cost Per Gallon | Transaction | >15% above monthly median for fuel type | Threshold %, enable/disable |
-| F3 — Odometer Issue | Transaction | Missing or decreasing odometer readings | Enable/disable |
-| F4 — Small Fill | Transaction | Fill < 25% of vehicle's average. Skips Corpay 1.0-gal defaults. | Threshold %, enable/disable |
-| F5 — High Frequency | Transaction | Driver with >3 fills in any 24-hour window | Fill count, time window, enable/disable |
-| F6 — Wrong Fuel Type | Transaction | Fuel mismatch vs Fleetio record. Gas vehicles: regular unleaded only. | Allowed fuel types per group, enable/disable |
+Flags F1-F6 apply to vehicle card transactions. Flags E1 and E2 (stored as flag_number 7 and 8 in the database) apply to equipment / unit card transactions.
+
+| Flag | Card Type | Level | Default Logic | Configurable |
+|---|---|---|---|---|
+| F1 — Fuel Efficiency | Vehicle | **Vehicle-level** | Period MPG >20% below baseline | Threshold %, enable/disable |
+| F2 — Cost Per Gallon | Vehicle | Transaction | >15% above monthly median for fuel type | Threshold %, enable/disable |
+| F3 — Odometer Issue | Vehicle | Transaction | Missing or decreasing odometer readings | Enable/disable |
+| F4 — Small Fill | Vehicle | Transaction | Fill < 25% of vehicle's average. Skips Corpay 1.0-gal defaults. | Threshold %, enable/disable |
+| F5 — High Frequency | Vehicle | Transaction | Driver with >3 fills in any 24-hour window | Fill count, time window, enable/disable |
+| F6 — Wrong Fuel Type | Vehicle | Transaction | Fuel mismatch vs Fleetio record. Gas vehicles: regular unleaded only. | Allowed fuel types per group, enable/disable |
+| E1 — Large Equipment Fill | Equipment | Transaction | Net price > $50. Catches vehicle-sized fuel purchases on equipment cards (legit equipment fills typically 2-6 gallons / under $25). | $ threshold, enable/disable |
+| E2 — Corpay Default (No Odometer) | Equipment | Transaction | Gallons == 1.0 AND PPG == 0 AND no odometer. Corpay's default when no odometer entered at pump; surfaces the pattern for review instead of silently dropping. | Enable/disable |
 
 ## Manager Actions — Acknowledge / Comment
 Fleet managers review flagged transactions and take one of two actions:
@@ -117,7 +121,7 @@ Per-fill MPG is **not used** because drivers don't always fill to full or drive 
 4. Fleetio API provides vehicles + fleet groups (pulled live during processing)
 5. Corpay header row auto-detected (handles raw exports with metadata rows before column headers)
 6. Matching: Corpay `Cardholder Last Name` suffix (zero-padded) → Fleetio vehicle name suffix
-7. Card type split: `VEHICLE` (analysis) | `UNIT`/`EQUIPMENT` (excluded) | `TEMPORARY` (separate section)
+7. Card type split: `VEHICLE` (flag-reviewed F1-F6) | `UNIT`/`EQUIPMENT` (flag-reviewed E1-E2) | `TEMPORARY` (every txn acknowledged)
 8. Report data stored in PostgreSQL (`transactions`, `flags`, `vehicle_mpg` tables) and reconstructed via `db_build_report()`
 9. Flask app reads report + decisions from the database (falls back to JSON files if no DB)
 
@@ -169,6 +173,10 @@ All core phases complete. System is deployed and operational. First live review 
 - Report data loaded from PostgreSQL (db_build_report): COMPLETE
 - Aeroseal brand mark favicon + header logo: COMPLETE
 - Zero-flag manager submission fix (managers with no flags can sign and submit): COMPLETE
+- Equipment / unit card capture (preserved through anomaly_detection, DB, report): COMPLETE
+- Equipment card flag review (E1 Large Fill >$50, E2 Corpay Default, with acknowledge/comment UI for managers): COMPLETE
+- Consolidated report restructured as Total Fleet Spend with Spend Breakdown by Category table (vehicle + temporary + equipment, review status per category): COMPLETE
+- Idempotent admin backfill route for equipment data on prior review periods (`/admin/backfill-equipment/<period>`): COMPLETE
 
 ## Roadmap / Open Items
 
