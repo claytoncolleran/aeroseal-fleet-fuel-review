@@ -18,15 +18,21 @@
   </div>
   <p style="font-size: 13px; color: #5A6B7B; margin-bottom: 16px;">These thresholds apply to all fleet groups unless overridden below.</p>
 
+  <div style="margin-bottom: 8px; font-size: 12px; font-weight: 600; color: #5A6B7B; text-transform: uppercase; letter-spacing: 0.04em;">Vehicle Card Flags</div>
   <div class="flag-settings-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
-    {% for flag_num in [1,2,3,4,5,6] %}
+    {% for flag_num in [1,2,3,4,5,6,7,8] %}
     {% set cfg = global_settings.get(flag_num, flag_defaults.get(flag_num, {})) %}
+    {% if flag_num == 7 %}
+  </div>
+  <div style="margin: 20px 0 8px; font-size: 12px; font-weight: 600; color: #5A6B7B; text-transform: uppercase; letter-spacing: 0.04em;">Equipment / Unit Card Flags</div>
+  <div class="flag-settings-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+    {% endif %}
     <div class="flag-setting-card" style="border: 1px solid var(--aeroseal-titanium); border-radius: 8px; padding: 16px;">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
         <div style="display: flex; align-items: center; gap: 8px;">
-          <span class="flag-badge flag-{{ flag_num }}" style="font-size: 11px;">F{{ flag_num }}</span>
+          <span class="flag-badge flag-{{ flag_num }}" style="font-size: 11px;">{% if flag_num >= 7 %}E{{ flag_num - 6 }}{% else %}F{{ flag_num }}{% endif %}</span>
           <strong style="font-size: 14px; color: var(--aeroseal-midnight-blue);">
-            {% if flag_num == 1 %}Fuel Efficiency{% elif flag_num == 2 %}Cost Per Gallon{% elif flag_num == 3 %}Odometer Issue{% elif flag_num == 4 %}Small Fill{% elif flag_num == 5 %}High Frequency{% elif flag_num == 6 %}Wrong Fuel Type{% endif %}
+            {% if flag_num == 1 %}Fuel Efficiency{% elif flag_num == 2 %}Cost Per Gallon{% elif flag_num == 3 %}Odometer Issue{% elif flag_num == 4 %}Small Fill{% elif flag_num == 5 %}High Frequency{% elif flag_num == 6 %}Wrong Fuel Type{% elif flag_num == 7 %}Large Equipment Fill{% elif flag_num == 8 %}Corpay Default (No Odometer){% endif %}
           </strong>
         </div>
         <label style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: #5A6B7B; cursor: pointer;">
@@ -79,6 +85,17 @@
         </label>
         {% endfor %}
       </div>
+
+      {% elif flag_num == 7 %}
+      <div style="display: flex; align-items: center; gap: 8px; font-size: 13px;">
+        <span style="color: #5A6B7B;">Flag equipment fill if above</span>
+        <span style="color: #5A6B7B;">$</span>
+        <input type="number" id="global-f7-threshold" value="{{ cfg.get('threshold_dollars', 50) }}" min="1" max="500" style="width: 70px; padding: 6px 8px; border: 1px solid var(--aeroseal-titanium); border-radius: 4px; font-size: 13px; text-align: center;">
+      </div>
+      <div style="font-size: 11px; color: #8A9099; margin-top: 6px; font-style: italic;">Suggests a vehicle fueling from an equipment card.</div>
+
+      {% elif flag_num == 8 %}
+      <div style="font-size: 13px; color: #5A6B7B;">Flags equipment transactions where Corpay defaulted to 1.0 gallon at $0/gal (no odometer entered at the pump). No threshold to configure.</div>
       {% endif %}
     </div>
     {% endfor %}
@@ -109,14 +126,20 @@
       <button class="btn btn-approve" style="padding: 8px 20px; font-size: 13px;" onclick="saveGroupOverrides()">Save Overrides</button>
     </div>
 
+    <div style="margin-bottom: 8px; font-size: 12px; font-weight: 600; color: #5A6B7B; text-transform: uppercase; letter-spacing: 0.04em;">Vehicle Card Flags</div>
     <div class="flag-settings-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
-      {% for flag_num in [1,2,3,4,5,6] %}
+      {% for flag_num in [1,2,3,4,5,6,7,8] %}
+      {% if flag_num == 7 %}
+      </div>
+      <div style="margin: 20px 0 8px; font-size: 12px; font-weight: 600; color: #5A6B7B; text-transform: uppercase; letter-spacing: 0.04em;">Equipment / Unit Card Flags</div>
+      <div class="flag-settings-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+      {% endif %}
       <div class="flag-setting-card" id="group-flag-{{ flag_num }}" style="border: 1px solid var(--aeroseal-titanium); border-radius: 8px; padding: 16px; position: relative;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
           <div style="display: flex; align-items: center; gap: 8px;">
-            <span class="flag-badge flag-{{ flag_num }}" style="font-size: 11px;">F{{ flag_num }}</span>
+            <span class="flag-badge flag-{{ flag_num }}" style="font-size: 11px;">{% if flag_num >= 7 %}E{{ flag_num - 6 }}{% else %}F{{ flag_num }}{% endif %}</span>
             <strong style="font-size: 14px; color: var(--aeroseal-midnight-blue);">
-              {% if flag_num == 1 %}Fuel Efficiency{% elif flag_num == 2 %}Cost Per Gallon{% elif flag_num == 3 %}Odometer Issue{% elif flag_num == 4 %}Small Fill{% elif flag_num == 5 %}High Frequency{% elif flag_num == 6 %}Wrong Fuel Type{% endif %}
+              {% if flag_num == 1 %}Fuel Efficiency{% elif flag_num == 2 %}Cost Per Gallon{% elif flag_num == 3 %}Odometer Issue{% elif flag_num == 4 %}Small Fill{% elif flag_num == 5 %}High Frequency{% elif flag_num == 6 %}Wrong Fuel Type{% elif flag_num == 7 %}Large Equipment Fill{% elif flag_num == 8 %}Corpay Default (No Odometer){% endif %}
             </strong>
           </div>
           <div style="display: flex; align-items: center; gap: 8px;">
@@ -200,6 +223,25 @@
             </label>
             {% endfor %}
           </div>
+
+          {% elif flag_num == 7 %}
+          <div style="display: flex; align-items: center; gap: 8px; font-size: 13px; margin-bottom: 6px;">
+            <label style="display: flex; align-items: center; gap: 4px; cursor: pointer;">
+              <input type="checkbox" id="group-enabled-{{ flag_num }}" checked style="accent-color: var(--aeroseal-sapphire);"> Enabled
+            </label>
+          </div>
+          <div style="display: flex; align-items: center; gap: 8px; font-size: 13px;">
+            <span style="color: #5A6B7B;">Threshold:</span>
+            <span style="color: #5A6B7B;">$</span>
+            <input type="number" id="group-f7-threshold" value="50" min="1" max="500" style="width: 70px; padding: 6px 8px; border: 1px solid var(--aeroseal-titanium); border-radius: 4px; font-size: 13px; text-align: center;">
+          </div>
+
+          {% elif flag_num == 8 %}
+          <div style="display: flex; align-items: center; gap: 8px; font-size: 13px;">
+            <label style="display: flex; align-items: center; gap: 4px; cursor: pointer;">
+              <input type="checkbox" id="group-enabled-{{ flag_num }}" checked style="accent-color: var(--aeroseal-sapphire);"> Enabled
+            </label>
+          </div>
           {% endif %}
         </div>
 
@@ -226,7 +268,7 @@ const globalSettings = {{ global_settings | tojson }};
 // ─── Global Defaults ───
 function readGlobals() {
   const data = {};
-  for (let f = 1; f <= 6; f++) {
+  for (let f = 1; f <= 8; f++) {
     const enabled = document.getElementById('global-enabled-' + f).checked;
     const cfg = {enabled};
     if (f === 1) cfg.threshold_pct = parseInt(document.getElementById('global-f1-threshold').value) || 20;
@@ -239,6 +281,7 @@ function readGlobals() {
     if (f === 6) {
       cfg.allowed_fuel_types = Array.from(document.querySelectorAll('.global-f6-fuel:checked')).map(cb => cb.value);
     }
+    if (f === 7) cfg.threshold_dollars = parseInt(document.getElementById('global-f7-threshold').value) || 50;
     data[f] = cfg;
   }
   return data;
@@ -267,7 +310,7 @@ function selectGroup() {
 
   const overrides = groupOverrides[group] || {};
 
-  for (let f = 1; f <= 6; f++) {
+  for (let f = 1; f <= 8; f++) {
     const toggle = document.querySelector('.group-override-toggle[data-flag="' + f + '"]');
     const fields = document.getElementById('group-fields-' + f);
     const defaultLabel = document.getElementById('group-default-' + f);
@@ -296,6 +339,9 @@ function selectGroup() {
           cb.checked = cfg.allowed_fuel_types.includes(cb.value);
         });
       }
+      if (f === 7 && cfg.threshold_dollars !== undefined) {
+        document.getElementById('group-f7-threshold').value = cfg.threshold_dollars;
+      }
     } else {
       // Reset to global defaults for display
       const g = globalSettings[f] || {};
@@ -313,6 +359,9 @@ function selectGroup() {
         document.querySelectorAll('.group-f6-fuel').forEach(cb => {
           cb.checked = allowed.includes(cb.value);
         });
+      }
+      if (f === 7) {
+        document.getElementById('group-f7-threshold').value = g.threshold_dollars || 50;
       }
     }
   }
@@ -332,7 +381,7 @@ function saveGroupOverrides() {
   if (!group) return;
 
   const data = {};
-  for (let f = 1; f <= 6; f++) {
+  for (let f = 1; f <= 8; f++) {
     const toggle = document.querySelector('.group-override-toggle[data-flag="' + f + '"]');
     if (!toggle.checked) {
       data[f] = null; // Remove override
@@ -350,6 +399,7 @@ function saveGroupOverrides() {
     if (f === 6) {
       cfg.allowed_fuel_types = Array.from(document.querySelectorAll('.group-f6-fuel:checked')).map(cb => cb.value);
     }
+    if (f === 7) cfg.threshold_dollars = parseInt(document.getElementById('group-f7-threshold').value) || 50;
     data[f] = cfg;
   }
 

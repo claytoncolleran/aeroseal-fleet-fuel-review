@@ -413,12 +413,16 @@ def db_complete_other_reviews(except_period):
 # TRANSACTION CRUD
 # ═══════════════════════════════════════════════════════════════════════════════
 
-def db_insert_transactions(review_id, transactions):
-    """Bulk insert transactions from anomaly report. Returns list of (db_id, txn_key)."""
+def db_insert_transactions(review_id, transactions, replace=True):
+    """Bulk insert transactions from anomaly report. Returns list of (db_id, txn_key).
+
+    When replace=True (default), clears all existing transactions for the
+    review first. When replace=False, appends without touching existing rows,
+    used for backfills that add equipment-only rows to a pre-existing review."""
     with get_db() as conn:
         cur = conn.cursor()
-        # Clear existing transactions for this review
-        cur.execute("DELETE FROM transactions WHERE review_id = %s", (review_id,))
+        if replace:
+            cur.execute("DELETE FROM transactions WHERE review_id = %s", (review_id,))
 
         results = []
         for t in transactions:
@@ -753,6 +757,8 @@ def db_build_report(period):
 # ═══════════════════════════════════════════════════════════════════════════════
 
 # Default flag configuration — used when no setting exists in the database.
+# Flags 1-6 run on vehicle card transactions.
+# Flags 7-8 run on equipment/unit card transactions.
 FLAG_DEFAULTS = {
     1: {"enabled": True, "threshold_pct": 20},
     2: {"enabled": True, "threshold_pct": 15},
@@ -760,6 +766,8 @@ FLAG_DEFAULTS = {
     4: {"enabled": True, "threshold_pct": 25},
     5: {"enabled": True, "fill_count": 3, "window_hours": 24},
     6: {"enabled": True, "allowed_fuel_types": ["Regular Unleaded"]},
+    7: {"enabled": True, "threshold_dollars": 50},
+    8: {"enabled": True},
 }
 
 

@@ -314,9 +314,31 @@
       <tr>
         <td><strong>{{ g.name }}</strong></td>
         <td>{{ g.summary.get('total_txns', 0) }}</td>
-        <td>{{ g.summary.get('flagged_txns', 0) }}</td>
-        <td>{{ g.approved }}</td>
-        <td>{% if g.denied > 0 %}<strong style="color: #C62828;">{{ g.denied }}</strong>{% else %}0{% endif %}</td>
+        <td>
+          {{ g.summary.get('flagged_txns', 0) + g.equipment_flag_count }}
+          {% if g.equipment_flag_count > 0 %}
+            <div style="font-size: 10px; color: #7A8896; font-weight: 400;">
+              {{ g.summary.get('flagged_txns', 0) }} veh + {{ g.equipment_flag_count }} equip
+            </div>
+          {% endif %}
+        </td>
+        <td>
+          {{ g.approved + g.equipment_approved }}
+          {% if g.equipment_flag_count > 0 %}
+            <div style="font-size: 10px; color: #7A8896; font-weight: 400;">
+              {{ g.approved }} veh + {{ g.equipment_approved }} equip
+            </div>
+          {% endif %}
+        </td>
+        <td>
+          {% set total_cmt = g.denied + g.equipment_denied %}
+          {% if total_cmt > 0 %}<strong style="color: #C62828;">{{ total_cmt }}</strong>{% else %}0{% endif %}
+          {% if g.equipment_flag_count > 0 %}
+            <div style="font-size: 10px; color: #7A8896; font-weight: 400;">
+              {{ g.denied }} veh + {{ g.equipment_denied }} equip
+            </div>
+          {% endif %}
+        </td>
         <td style="text-align: right;">
           <span class="spend-primary">${{ "{:,.2f}".format(g.combined_spend) }}</span>
           <span class="spend-breakdown">
@@ -334,9 +356,30 @@
       <tr class="total-row">
         <td>Grand Total</td>
         <td>{{ summary.get('total_vehicle_transactions_analyzed', 0) }}</td>
-        <td>{{ total_flagged }}</td>
-        <td>{{ total_approved }}</td>
-        <td>{{ total_denied }}</td>
+        <td>
+          {{ total_flagged + total_equip_flagged }}
+          {% if total_equip_flagged > 0 %}
+            <div style="font-size: 10px; color: #7A8896; font-weight: 400;">
+              {{ total_flagged }} veh + {{ total_equip_flagged }} equip
+            </div>
+          {% endif %}
+        </td>
+        <td>
+          {{ total_approved + total_equip_approved }}
+          {% if total_equip_flagged > 0 %}
+            <div style="font-size: 10px; color: #7A8896; font-weight: 400;">
+              {{ total_approved }} veh + {{ total_equip_approved }} equip
+            </div>
+          {% endif %}
+        </td>
+        <td>
+          {{ total_denied + total_equip_denied }}
+          {% if total_equip_flagged > 0 %}
+            <div style="font-size: 10px; color: #7A8896; font-weight: 400;">
+              {{ total_denied }} veh + {{ total_equip_denied }} equip
+            </div>
+          {% endif %}
+        </td>
         <td style="text-align: right;">
           <span class="spend-primary" style="font-size: 13px;">${{ "{:,.2f}".format(grand_total) }}</span>
           <span class="spend-breakdown">
@@ -352,11 +395,11 @@
     </tbody>
   </table>
   <p style="font-size: 11px; color: #5A6B7B; font-style: italic; margin-top: -8px;">
-    Total Spend reflects all Corpay spend per fleet group (vehicle, temporary, and equipment cards). Breakdown shown beneath each total. Equipment spend is reported but not individually reviewed.
+    Total Spend reflects all Corpay spend per fleet group (vehicle, temporary, and equipment cards). Breakdown shown beneath each total. Flagged / Acknowledged / Commented counts combine vehicle card flags (F1-F6) and equipment card flags (E1-E2).
   </p>
 
-  <!-- Denied Items Detail -->
-  <h2>Commented Transactions, Full Detail</h2>
+  <!-- Vehicle Commented Items Detail -->
+  <h2>Commented Vehicle Transactions, Full Detail</h2>
   {% set has_denials = namespace(value=false) %}
   {% for g in group_data %}
     {% if g.denied_items %}
@@ -386,7 +429,44 @@
     {% endif %}
   {% endfor %}
   {% if not has_denials.value %}
-    <p style="color: #5A6B7B; padding: 12px 0;">No transactions had comments during this review period.</p>
+    <p style="color: #5A6B7B; padding: 12px 0;">No vehicle transactions had comments during this review period.</p>
+  {% endif %}
+
+  <!-- Equipment Commented Items Detail -->
+  {% set has_equip_denials = namespace(value=false) %}
+  {% for g in group_data %}{% if g.equipment_denied_items %}{% set has_equip_denials.value = true %}{% endif %}{% endfor %}
+  {% if total_equip_flagged > 0 or has_equip_denials.value %}
+  <h2>Commented Equipment Transactions, Full Detail</h2>
+  {% if has_equip_denials.value %}
+    {% for g in group_data %}
+      {% if g.equipment_denied_items %}
+        <h3>{{ g.name }}</h3>
+        <table>
+          <thead>
+            <tr><th>Date</th><th>Card No.</th><th>Cardholder</th><th>Cost</th><th>Flags</th><th>Comment</th></tr>
+          </thead>
+          <tbody>
+            {% for t in g.equipment_denied_items %}
+            <tr class="denied-row">
+              <td>{{ t.transaction_date }}</td>
+              <td style="font-size: 11px;">{{ t.card_no or '—' }}</td>
+              <td>{{ t.cardholder or '—' }}</td>
+              <td>${{ "%.2f"|format(t.net_price) if t.net_price else '—' }}</td>
+              <td>
+                {% for flag in t.flags %}
+                  <span class="flag-badge flag-{{ flag.flag }}">E{{ flag.flag - 6 }}</span>
+                {% endfor %}
+              </td>
+              <td><strong>{{ t.decision.get('reason', '') }}</strong></td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      {% endif %}
+    {% endfor %}
+  {% else %}
+    <p style="color: #5A6B7B; padding: 12px 0;">No equipment transactions had comments during this review period.</p>
+  {% endif %}
   {% endif %}
 
   <!-- Fuel Type Pricing -->

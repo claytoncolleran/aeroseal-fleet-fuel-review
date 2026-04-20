@@ -394,6 +394,8 @@ def group_view(group_name):
 
     txns = [t for t in report.get("transactions", []) if t["fleet_group"] == group_name]
     temp_cards = [t for t in report.get("temporary_cards", []) if t["fleet_group"] == group_name]
+    equipment_cards = [t for t in report.get("equipment_cards", []) if t["fleet_group"] == group_name]
+    flagged_equipment = [t for t in equipment_cards if t.get("flag_count", 0) > 0]
     declined = [t for t in report.get("declined_transactions", []) if t["fleet_group"] == group_name]
 
     vehicles = {}
@@ -413,6 +415,8 @@ def group_view(group_name):
                            group_name=group_name,
                            vehicles=vehicles,
                            temp_cards=temp_cards,
+                           flagged_equipment=flagged_equipment,
+                           equipment_total_count=len(equipment_cards),
                            declined=declined,
                            mpg_summary=mpg_summary,
                            summary=report.get("summary", {}),
@@ -541,6 +545,7 @@ def admin_group_detail(group_name):
 
     txns = [t for t in report.get("transactions", []) if t["fleet_group"] == group_name]
     temp_cards = [t for t in report.get("temporary_cards", []) if t["fleet_group"] == group_name]
+    equipment_cards = [t for t in report.get("equipment_cards", []) if t["fleet_group"] == group_name]
     declined = [t for t in report.get("declined_transactions", []) if t["fleet_group"] == group_name]
     g_decisions = decisions.get(group_name, {})
     submission = g_decisions.get("_submission")
@@ -554,19 +559,32 @@ def admin_group_detail(group_name):
             decision = g_decisions.get(txn_key, {})
             flagged_txns.append({**t, "decision": decision, "txn_key": txn_key})
 
+    flagged_equipment = []
+    for t in equipment_cards:
+        if t.get("flag_count", 0) > 0:
+            txn_key = f"EQUIP_{t.get('card_no') or t.get('cardholder')}_{t['transaction_date']}_{t['transaction_time']}"
+            decision = g_decisions.get(txn_key, {})
+            flagged_equipment.append({**t, "decision": decision, "txn_key": txn_key})
+
     approvals = sum(1 for f in flagged_txns if f["decision"].get("action") == "approve")
     denials = sum(1 for f in flagged_txns if f["decision"].get("action") == "deny")
+    equipment_approvals = sum(1 for f in flagged_equipment if f["decision"].get("action") == "approve")
+    equipment_denials = sum(1 for f in flagged_equipment if f["decision"].get("action") == "deny")
 
     return render_template("admin_group.html",
                            group_name=group_name,
                            flagged_txns=flagged_txns,
                            temp_cards=temp_cards,
+                           flagged_equipment=flagged_equipment,
+                           equipment_total_count=len(equipment_cards),
                            declined=declined,
                            submission=submission,
                            g_summary=g_summary,
                            mpg_summary=mpg_summary,
                            approvals=approvals,
                            denials=denials,
+                           equipment_approvals=equipment_approvals,
+                           equipment_denials=equipment_denials,
                            total_txns=len(txns))
 
 
@@ -591,10 +609,13 @@ def generate_report():
 
     equipment_by_group = {}
     equipment_count_by_group = {}
+    equipment_flag_count_global = 0
     for t in report.get("equipment_cards", []):
         g = t.get("fleet_group")
         equipment_by_group[g] = equipment_by_group.get(g, 0) + (t.get("net_price") or 0)
         equipment_count_by_group[g] = equipment_count_by_group.get(g, 0) + 1
+        if t.get("flag_count", 0) > 0:
+            equipment_flag_count_global += 1
 
     # Include fleet groups that only have equipment/temp spend but no vehicle txns
     all_groups = set(groups) | set(temp_by_group.keys()) | set(equipment_by_group.keys())
@@ -608,6 +629,9 @@ def generate_report():
     total_flagged = 0
     total_approved = 0
     total_denied = 0
+    total_equip_flagged = 0
+    total_equip_approved = 0
+    total_equip_denied = 0
 
     for g in groups:
         g_summary = report.get("group_summary", {}).get(g, {})
@@ -634,6 +658,20 @@ def generate_report():
         total_approved += approved
         total_denied += denied
 
+        g_equipment = [t for t in report.get("equipment_cards", []) if t["fleet_group"] == g]
+        equipment_flagged = []
+        for t in g_equipment:
+            if t.get("flag_count", 0) > 0:
+                txn_key = f"EQUIP_{t.get('card_no') or t.get('cardholder')}_{t['transaction_date']}_{t['transaction_time']}"
+                decision = g_decisions.get(txn_key, {})
+                equipment_flagged.append({**t, "decision": decision})
+
+        equip_approved = sum(1 for f in equipment_flagged if f["decision"].get("action") == "approve")
+        equip_denied = sum(1 for f in equipment_flagged if f["decision"].get("action") == "deny")
+        total_equip_flagged += len(equipment_flagged)
+        total_equip_approved += equip_approved
+        total_equip_denied += equip_denied
+
         group_data.append({
             "name": g,
             "summary": g_summary,
@@ -642,6 +680,11 @@ def generate_report():
             "denied_items": [f for f in flagged if f["decision"].get("action") == "deny"],
             "approved": approved,
             "denied": denied,
+            "equipment_flagged": equipment_flagged,
+            "equipment_denied_items": [f for f in equipment_flagged if f["decision"].get("action") == "deny"],
+            "equipment_approved": equip_approved,
+            "equipment_denied": equip_denied,
+            "equipment_flag_count": len(equipment_flagged),
             "spend": spend,
             "temp_spend": temp_spend,
             "equipment_spend": equipment_spend,
@@ -650,6 +693,18 @@ def generate_report():
 
     mpg_summary = report.get("mpg_summary_by_vehicle", {})
     flagged_vehicles = {k: v for k, v in mpg_summary.items() if v.get("flagged")}
+
+    equipment_total_count = len(report.get("equipment_cards", []))
+    if equipment_total_count == 0:
+        equipment_review_status = "No equipment transactions this period"
+        equipment_tone = "ok"
+    elif equipment_flag_count_global == 0:
+        equipment_review_status = "No flags raised (all fills below threshold, no data-quality issues)"
+        equipment_tone = "ok"
+    else:
+        equipment_review_status = (f"Flag-reviewed by fleet manager "
+                                    f"({equipment_flag_count_global} of {equipment_total_count} flagged)")
+        equipment_tone = "ok"
 
     spend_categories = [
         {
@@ -663,15 +718,15 @@ def generate_report():
             "label": "Temporary Cards",
             "txn_count": len(report.get("temporary_cards", [])),
             "spend": temp_grand_total,
-            "review_status": "Reviewed by fleet manager (separate workflow)",
+            "review_status": "Reviewed by fleet manager (every transaction acknowledged)",
             "status_tone": "ok",
         },
         {
             "label": "Equipment / Unit Cards",
-            "txn_count": len(report.get("equipment_cards", [])),
+            "txn_count": equipment_total_count,
             "spend": equipment_grand_total,
-            "review_status": "Not reviewed (no assigned vehicle, outside review scope)",
-            "status_tone": "warn",
+            "review_status": equipment_review_status,
+            "status_tone": equipment_tone,
         },
     ]
 
@@ -685,6 +740,9 @@ def generate_report():
                            total_flagged=total_flagged,
                            total_approved=total_approved,
                            total_denied=total_denied,
+                           total_equip_flagged=total_equip_flagged,
+                           total_equip_approved=total_equip_approved,
+                           total_equip_denied=total_equip_denied,
                            summary=report.get("summary", {}),
                            mpg_summary=mpg_summary,
                            flagged_vehicles=flagged_vehicles,
@@ -717,7 +775,14 @@ def backfill_equipment(period):
 
     sys.path.insert(0, TOOLS_DIR)
     from anomaly_detection import (load_corpay, safe_float,
-                                     infer_group_from_subaccount)
+                                     infer_group_from_subaccount,
+                                     _resolve_flag_config)
+
+    # Load flag settings so backfill applies the same configured thresholds
+    flag_settings = {
+        "global": database.db_get_global_settings(),
+        "groups": database.db_get_all_group_overrides(),
+    }
 
     rows = load_corpay(corpay_file=upload_path)
     equipment_records = []
@@ -728,28 +793,62 @@ def backfill_equipment(period):
             continue
         if status == "DECLINED":
             continue
+
+        group = infer_group_from_subaccount(row.get("Sub Account"))
+        net = safe_float(row.get("Net Price")) or 0
+        gal = safe_float(row.get("Unit/Gallons")) or 0
+        ppg = safe_float(row.get("Gross PPU/PPG")) or 0
+        odo = safe_float(row.get("Odometer"))
+
+        flags_for_txn = []
+
+        # Flag 7: Large equipment fill
+        f7_cfg = _resolve_flag_config(group, 7, flag_settings)
+        if f7_cfg.get("enabled", True):
+            threshold_dollars = f7_cfg.get("threshold_dollars", 50)
+            if net > threshold_dollars:
+                flags_for_txn.append({
+                    "flag": 7,
+                    "flag_name": "Large Equipment Fill",
+                    "reason": (f"Equipment card transaction of ${net:,.2f} exceeds "
+                               f"${threshold_dollars} threshold. Verify this fill "
+                               f"was not for a vehicle."),
+                })
+
+        # Flag 8: Corpay 1.0-gallon default (no odometer)
+        f8_cfg = _resolve_flag_config(group, 8, flag_settings)
+        if f8_cfg.get("enabled", True):
+            if gal == 1.0 and ppg == 0 and not odo:
+                flags_for_txn.append({
+                    "flag": 8,
+                    "flag_name": "Corpay Default (No Odometer)",
+                    "reason": (f"Corpay defaulted to 1.0 gallon at $0.00/gal "
+                               f"because no odometer was entered at the pump. "
+                               f"Actual amount charged: ${net:,.2f}."),
+                })
+
         equipment_records.append({
             "transaction_date": row.get("Transaction Date - Date"),
             "transaction_time": row.get("Transaction Date - Time"),
             "vehicle_name": None,
-            "fleet_group": infer_group_from_subaccount(row.get("Sub Account")),
+            "fleet_group": group,
             "cardholder": row.get("Cardholder Full Name"),
             "driver": row.get("Spender") or row.get("Cardholder Full Name"),
             "vendor": row.get("Vendor") or row.get("Description"),
             "location": row.get("Address"),
             "state": row.get("State"),
             "status": row.get("Status"),
-            "gallons": safe_float(row.get("Unit/Gallons")),
+            "gallons": gal,
             "gross_price": safe_float(row.get("Gross Price")),
-            "net_price": safe_float(row.get("Net Price")),
-            "gross_ppg": safe_float(row.get("Gross PPU/PPG")),
+            "net_price": net,
+            "gross_ppg": ppg,
             "product": row.get("Product Description"),
-            "odometer": safe_float(row.get("Odometer")),
+            "odometer": odo,
             "card_no": row.get("Card No."),
             "sub_account": row.get("Sub Account"),
             "card_type": "equipment",
-            "flag_count": 0,
-            "flags": [],
+            "flag_count": len(flags_for_txn),
+            "flags": flags_for_txn,
         })
 
     total_spend = sum((r.get("net_price") or 0) for r in equipment_records)
@@ -793,10 +892,13 @@ def backfill_equipment(period):
         preview["message"] = "No equipment rows found in the Corpay file."
         return jsonify(preview), 200
 
-    database.db_insert_transactions(review_id, equipment_records)
+    database.db_insert_transactions(review_id, equipment_records, replace=False)
 
+    flagged_count = sum(1 for r in equipment_records if r["flag_count"] > 0)
     preview["status"] = "inserted"
-    preview["message"] = f"Inserted {len(equipment_records)} equipment rows totaling ${total_spend:,.2f}"
+    preview["flagged_equipment_rows"] = flagged_count
+    preview["message"] = (f"Inserted {len(equipment_records)} equipment rows totaling "
+                           f"${total_spend:,.2f}. {flagged_count} flagged for manager review.")
     return jsonify(preview), 200
 
 
@@ -940,9 +1042,10 @@ def create_review():
                 t["flags"] = []
             for t in equipment_cards:
                 t["card_type"] = "equipment"
-                t["flag_count"] = 0
-                t["flags"] = []
                 t["vehicle_name"] = None
+                # flag_count and flags already populated by anomaly_detection.py
+                t.setdefault("flag_count", 0)
+                t.setdefault("flags", [])
             for t in declined:
                 t["card_type"] = "declined"
                 t["flag_count"] = 0

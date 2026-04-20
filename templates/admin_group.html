@@ -142,6 +142,57 @@
   </div>
 </div>
 
+{% if flagged_equipment %}
+<h2 style="font-size: 18px; font-weight: 700; color: #8C5A00; margin: 24px 0 12px;">
+  Flagged Equipment / Unit Cards ({{ flagged_equipment|length }} of {{ equipment_total_count }})
+  <span style="font-size: 12px; font-weight: 500; color: #5A6B7B; margin-left: 8px;">
+    {{ equipment_approvals }} acknowledged &middot; {{ equipment_denials }} commented
+  </span>
+</h2>
+<div class="card">
+  <div class="table-scroll">
+  <table class="txn-table">
+    <thead>
+      <tr>
+        <th>Date</th>
+        <th>Card No.</th>
+        <th>Cardholder</th>
+        <th>Gallons</th>
+        <th>Cost</th>
+        <th>Flags</th>
+        <th>Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for t in flagged_equipment %}
+      <tr class="{% if t.decision.get('action') == 'deny' %}flagged{% endif %}">
+        <td style="white-space: nowrap;">{{ t.transaction_date }}</td>
+        <td style="font-size: 11px;">{{ t.card_no or '—' }}</td>
+        <td>{{ t.cardholder or '—' }}</td>
+        <td>{{ "%.1f"|format(t.gallons) if t.gallons else '—' }}</td>
+        <td>${{ "%.2f"|format(t.net_price) if t.net_price else '—' }}</td>
+        <td>
+          {% for flag in t.flags %}
+            <span class="flag-badge flag-{{ flag.flag }}">E{{ flag.flag - 6 }}</span>
+          {% endfor %}
+        </td>
+        <td>
+          {% if t.decision.get('action') == 'approve' %}
+            <span class="decision-status decision-approved">Acknowledged</span>
+          {% elif t.decision.get('action') == 'deny' %}
+            <span class="decision-status decision-denied" title="{{ t.decision.get('reason', '') }}">Commented</span>
+          {% else %}
+            <span style="color: #999; font-size: 12px;">Pending</span>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</div>
+{% endif %}
+
 {% if temp_cards %}
 <h2 style="font-size: 18px; font-weight: 700; color: #F57F17; margin: 24px 0 12px;">
   Temporary Card Transactions ({{ temp_cards|length }})

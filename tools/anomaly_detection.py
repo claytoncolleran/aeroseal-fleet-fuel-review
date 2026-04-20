@@ -595,6 +595,8 @@ def _resolve_flag_config(group, flag_num, flag_settings):
         4: {"enabled": True, "threshold_pct": 25},
         5: {"enabled": True, "fill_count": 3, "window_hours": 24},
         6: {"enabled": True, "allowed_fuel_types": ["Regular Unleaded"]},
+        7: {"enabled": True, "threshold_dollars": 50},
+        8: {"enabled": True},
     }
     if not flag_settings:
         return defaults.get(flag_num, {"enabled": True})
@@ -890,12 +892,47 @@ def run(corpay_file=None, baselines_file=None, output_file=None, flag_settings=N
             "fleet_group": infer_group_from_subaccount(row.get("Sub Account")),
         })
 
-    # ── Build equipment card records ──
-    # UNIT/EQUIPMENT cards aren't matched to a specific Fleetio vehicle and
-    # don't go through flag review, but the money is real and accounting needs
-    # to see it in the consolidated report.
+    # ── Build equipment card records with flags 7 and 8 ──
+    # UNIT/EQUIPMENT cards have no assigned Fleetio vehicle, but we flag the
+    # two patterns that suggest misuse or data-quality issues: large fills
+    # (likely a vehicle fueling from an equipment card) and Corpay 1.0-gal
+    # defaults (no odometer entered at pump).
     equipment_records = []
     for row in equipment_txns:
+        group = infer_group_from_subaccount(row.get("Sub Account"))
+        net = safe_float(row.get("Net Price")) or 0
+        gal = safe_float(row.get("Unit/Gallons")) or 0
+        ppg = safe_float(row.get("Gross PPU/PPG")) or 0
+        odo = safe_float(row.get("Odometer"))
+
+        flags_for_txn = []
+
+        # Flag 7: Large equipment fill (likely vehicle fueling from unit card)
+        f7_cfg = _resolve_flag_config(group, 7, flag_settings)
+        if f7_cfg.get("enabled", True):
+            threshold_dollars = f7_cfg.get("threshold_dollars", 50)
+            if net > threshold_dollars:
+                flags_for_txn.append({
+                    "flag": 7,
+                    "flag_name": "Large Equipment Fill",
+                    "reason": (f"Equipment card transaction of ${net:,.2f} exceeds "
+                               f"${threshold_dollars} threshold. Verify this fill "
+                               f"was not for a vehicle."),
+                })
+
+        # Flag 8: Corpay 1.0-gallon default (no odometer entered at pump)
+        f8_cfg = _resolve_flag_config(group, 8, flag_settings)
+        if f8_cfg.get("enabled", True):
+            is_corpay_default = (gal == 1.0 and ppg == 0 and not odo)
+            if is_corpay_default:
+                flags_for_txn.append({
+                    "flag": 8,
+                    "flag_name": "Corpay Default (No Odometer)",
+                    "reason": (f"Corpay defaulted to 1.0 gallon at $0.00/gal "
+                               f"because no odometer was entered at the pump. "
+                               f"Actual amount charged: ${net:,.2f}."),
+                })
+
         equipment_records.append({
             "transaction_date": row.get("Transaction Date - Date"),
             "transaction_time": row.get("Transaction Date - Time"),
@@ -905,15 +942,17 @@ def run(corpay_file=None, baselines_file=None, output_file=None, flag_settings=N
             "location": row.get("Address"),
             "state": row.get("State"),
             "status": row.get("Status"),
-            "gallons": safe_float(row.get("Unit/Gallons")),
+            "gallons": gal,
             "gross_price": safe_float(row.get("Gross Price")),
-            "net_price": safe_float(row.get("Net Price")),
-            "gross_ppg": safe_float(row.get("Gross PPU/PPG")),
+            "net_price": net,
+            "gross_ppg": ppg,
             "product": row.get("Product Description"),
-            "odometer": safe_float(row.get("Odometer")),
+            "odometer": odo,
             "card_no": row.get("Card No."),
             "sub_account": row.get("Sub Account"),
-            "fleet_group": infer_group_from_subaccount(row.get("Sub Account")),
+            "fleet_group": group,
+            "flags": flags_for_txn,
+            "flag_count": len(flags_for_txn),
         })
 
     # ── Group summary ──

@@ -208,6 +208,78 @@
 </div>
 {% endif %}
 
+<!-- ═══ Equipment Card Section (Flagged Only) ═══ -->
+{% if flagged_equipment %}
+<div class="section-label">
+  <div class="section-icon" style="background: #C07A1F;">E</div>
+  Equipment / Unit Cards — Flagged for Review
+</div>
+<div class="section-banner banner-warn">
+  <strong>{{ flagged_equipment|length }} of {{ equipment_total_count }} equipment card transactions</strong> were flagged for review.
+  Equipment cards should be used only for non-vehicle equipment (generators, welders, small engines). Large fills or missing odometer entries may indicate a vehicle was fueled from an equipment card.
+</div>
+<div class="card">
+  <div class="table-scroll">
+  <table class="txn-table">
+    <thead>
+      <tr>
+        <th>Date</th>
+        <th>Card No.</th>
+        <th>Cardholder</th>
+        <th>Driver</th>
+        <th>Vendor</th>
+        <th>Gallons</th>
+        <th>Cost</th>
+        <th>$/Gal</th>
+        <th>Product</th>
+        <th>Flags</th>
+        <th>Action</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for txn in flagged_equipment %}
+      {% set txn_key = "EQUIP_" ~ (txn.card_no or txn.cardholder) ~ "_" ~ txn.transaction_date ~ "_" ~ txn.transaction_time %}
+      {% set existing = decisions.get(txn_key, {}) %}
+      <tr class="flagged">
+        <td style="white-space: nowrap;">{{ txn.transaction_date }}<br><span style="color: #999; font-size: 11px;">{{ txn.transaction_time }}</span></td>
+        <td style="font-size: 11px;">{{ txn.card_no or '—' }}</td>
+        <td>{{ txn.cardholder or '—' }}</td>
+        <td>{{ txn.driver or '—' }}</td>
+        <td style="max-width: 160px;">{{ txn.vendor or '—' }}</td>
+        <td>{{ "%.1f"|format(txn.gallons) if txn.gallons else '—' }}</td>
+        <td>${{ "%.2f"|format(txn.net_price) if txn.net_price else '—' }}</td>
+        <td>{{ "$%.3f"|format(txn.gross_ppg) if txn.gross_ppg else '—' }}</td>
+        <td style="font-size: 11px;">{{ txn.product or '—' }}</td>
+        <td>
+          {% for flag in txn.flags %}
+            <span class="flag-badge flag-{{ flag.flag }}">E{{ flag.flag - 6 }}</span>
+          {% endfor %}
+          {% for flag in txn.flags %}
+            <div class="flag-detail flag-{{ flag.flag }}-detail">{{ flag.reason }}</div>
+          {% endfor %}
+        </td>
+        <td>
+          <div class="decision-row" data-txn-key="{{ txn_key }}">
+            {% if existing.get('action') == 'approve' %}
+              <span class="decision-status decision-approved">Acknowledged</span>
+            {% elif existing.get('action') == 'deny' %}
+              <span class="decision-status decision-denied">Comment: {{ existing.get('reason', '') }}</span>
+            {% else %}
+              <button class="btn btn-approve btn-sm" onclick="submitDecision(this, '{{ txn_key }}', 'approve')">Acknowledge</button>
+              <button class="btn btn-deny btn-sm" onclick="showDenyReason(this, '{{ txn_key }}')">Comment</button>
+              <input class="deny-reason" type="text" placeholder="Enter comment..." data-key="{{ txn_key }}"
+                     onkeydown="if(event.key==='Enter')submitDeny(this,'{{ txn_key }}')">
+            {% endif %}
+          </div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</div>
+{% endif %}
+
 <!-- ═══ Declined Transaction Section ═══ -->
 {% if declined %}
 <div class="section-label">
