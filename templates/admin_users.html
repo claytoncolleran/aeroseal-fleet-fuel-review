@@ -85,7 +85,7 @@
           {% if email != current_user.email %}
             <button class="btn btn-sm" style="font-size: 11px; padding: 4px 12px; background: transparent; color: var(--aeroseal-steel-blue); border: 1px solid var(--aeroseal-steel-blue); border-radius: 4px; cursor: pointer;" onclick="openEditModal('{{ email }}', '{{ user.get('display_name', '') }}', '{{ user.get('role', 'manager') }}', '{{ user.get('fleet_group', '') }}')">Edit</button>
             <button class="btn btn-sm" style="font-size: 11px; padding: 4px 12px; background: transparent; color: var(--aeroseal-sapphire); border: 1px solid var(--aeroseal-sapphire); border-radius: 4px; cursor: pointer; margin-left: 4px;" onclick="resendInvite('{{ email }}')">
-              {% if user.get('status') == 'active' %}Reset Password{% else %}Resend Invite{% endif %}
+              Resend Welcome Email
             </button>
             <button class="btn btn-sm" style="font-size: 11px; padding: 4px 12px; background: transparent; color: #C62828; border: 1px solid #C62828; border-radius: 4px; cursor: pointer; margin-left: 4px;" onclick="deleteUser('{{ email }}')">Delete</button>
           {% else %}
@@ -182,7 +182,7 @@ function inviteUser() {
 }
 
 function resendInvite(email) {
-  if (!confirm('Send a password setup link to ' + email + '? This will invalidate their current password.')) return;
+  if (!confirm('Resend the welcome email to ' + email + '?')) return;
 
   fetch('/api/users/' + encodeURIComponent(email) + '/resend-invite', {
     method: 'POST',

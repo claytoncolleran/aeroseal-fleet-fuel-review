@@ -6,12 +6,13 @@ Supports monthly review cycles with upload, process, notify, and archive.
 
 from flask import (Flask, render_template, request, jsonify, redirect,
                    url_for, session, flash, send_file)
-from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 from functools import wraps
 import json
 import os
+import random
 import sys
+import time
 from datetime import datetime
 import secrets
 import db as database
@@ -186,14 +187,13 @@ def save_users(users):
 
 
 def init_default_admin():
-    """Create default admin account if no users exist."""
+    """Create default admin account if no users exist. No password is set;
+    admin signs in with their email via an emailed 6-digit code."""
     default_email = os.environ.get("ADMIN_DEFAULT_EMAIL", "admin@aeroseal.com")
-    default_pw = os.environ.get("ADMIN_DEFAULT_PASSWORD", "changeme")
-    pw_hash = generate_password_hash(default_pw, method="pbkdf2:sha256")
 
     if USE_DB:
         if database.db_user_count() == 0:
-            database.db_create_user(default_email, pw_hash, "Administrator", "admin", None)
+            database.db_create_user(default_email, None, "Administrator", "admin", None)
             print(f"  Default admin account created in DB (email: {default_email})")
     else:
         users = load_users()
@@ -202,7 +202,7 @@ def init_default_admin():
             users = {}
         if not users:
             users[default_email] = {
-                "password_hash": pw_hash,
+                "password_hash": None,
                 "role": "admin",
                 "display_name": "Administrator",
                 "fleet_group": None,
@@ -220,7 +220,7 @@ def login_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
         if "email" not in session:
-            return redirect(url_for("login"))
+            return redirect(url_for("login", next=request.full_path if request.query_string else request.path))
         return f(*args, **kwargs)
     return decorated
 
@@ -229,7 +229,7 @@ def admin_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
         if "email" not in session:
-            return redirect(url_for("login"))
+            return redirect(url_for("login", next=request.full_path if request.query_string else request.path))
         if session.get("role") != "admin":
             flash("Admin access required.", "error")
             return redirect(url_for("index"))
@@ -258,17 +258,53 @@ def inject_globals():
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# AUTH ROUTES
+# AUTH ROUTES — email + 6-digit code
 # ═══════════════════════════════════════════════════════════════════════════════
+
+# In-memory rate limiting: {(ip, path): [(timestamp, ...)]}
+_login_attempts = {}
+_LOGIN_WINDOW_SECONDS = 15 * 60
+_LOGIN_MAX_ATTEMPTS = 10
+
+
+def _login_rate_limited(scope):
+    """True if the calling IP has exceeded the attempt limit for this scope."""
+    ip = request.headers.get("X-Forwarded-For", request.remote_addr or "unknown").split(",")[0].strip()
+    key = (ip, scope)
+    now = time.time()
+    events = [t for t in _login_attempts.get(key, []) if now - t < _LOGIN_WINDOW_SECONDS]
+    if len(events) >= _LOGIN_MAX_ATTEMPTS:
+        _login_attempts[key] = events
+        return True
+    events.append(now)
+    _login_attempts[key] = events
+    if len(_login_attempts) > 5000:
+        for k, v in list(_login_attempts.items()):
+            if not v or now - v[-1] > _LOGIN_WINDOW_SECONDS:
+                _login_attempts.pop(k, None)
+    return False
+
+
+def _generate_login_code():
+    return f"{random.SystemRandom().randint(0, 999999):06d}"
+
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if "email" in session:
         return redirect(url_for("index"))
 
+    callback_url = request.values.get("next") or request.args.get("next") or ""
+
     if request.method == "POST":
+        if _login_rate_limited("login"):
+            flash("Too many attempts. Wait 15 minutes and try again.", "error")
+            return render_template("login.html", callback_url=callback_url)
+
         email = request.form.get("email", "").strip().lower()
-        password = request.form.get("password", "")
+        if not email:
+            flash("Enter your email address.", "error")
+            return render_template("login.html", callback_url=callback_url)
 
         if USE_DB:
             user = database.db_get_user(email)
@@ -276,17 +312,76 @@ def login():
             users = load_users()
             user = users.get(email)
 
-        if user and user.get("password_hash") and check_password_hash(user["password_hash"], password):
-            session["email"] = email
-            session["role"] = user["role"]
-            session["display_name"] = user.get("display_name", email)
-            session["fleet_group"] = user.get("fleet_group")
-            session.permanent = True
-            return redirect(url_for("index"))
-        else:
-            flash("Invalid email or password.", "error")
+        # We send a code only to addresses that already have an account, but
+        # we keep the response identical to avoid leaking which emails exist.
+        if user and USE_DB:
+            code = _generate_login_code()
+            database.db_set_login_code(email, code, ttl_minutes=15)
+            resend_key = os.environ.get("RESEND_API_KEY")
+            if resend_key:
+                from_email = os.environ.get("FROM_EMAIL", "notifications@aeroseal.com")
+                try:
+                    _send_email(
+                        api_key=resend_key,
+                        from_email=from_email,
+                        to_email=email,
+                        subject=f"Your Aeroseal Fuel Review sign-in code: {code}",
+                        html=_build_code_email_html(code),
+                    )
+                except Exception as e:
+                    print(f"  [login] code email failed for {email}: {e}", flush=True)
 
-    return render_template("login.html")
+        session["pending_email"] = email
+        session["pending_next"] = callback_url
+        return redirect(url_for("login_verify"))
+
+    return render_template("login.html", callback_url=callback_url)
+
+
+@app.route("/login/verify", methods=["GET", "POST"])
+def login_verify():
+    if "email" in session:
+        return redirect(url_for("index"))
+
+    pending_email = session.get("pending_email", "")
+    if not pending_email:
+        return redirect(url_for("login"))
+
+    if request.method == "POST":
+        if _login_rate_limited("verify"):
+            flash("Too many attempts. Wait 15 minutes and try again.", "error")
+            return render_template("login_verify.html", email=pending_email)
+
+        code = request.form.get("code", "").strip()
+        if not code or len(code) != 6 or not code.isdigit():
+            flash("Enter the 6-digit code from your email.", "error")
+            return render_template("login_verify.html", email=pending_email)
+
+        if not USE_DB:
+            flash("Code sign-in requires the database.", "error")
+            return render_template("login_verify.html", email=pending_email)
+
+        if not database.db_verify_login_code(pending_email, code):
+            flash("That code didn't work. Double-check the code, or request a new one.", "error")
+            return render_template("login_verify.html", email=pending_email)
+
+        database.db_clear_login_code(pending_email)
+        user = database.db_get_user(pending_email)
+        if not user:
+            flash("Account not found. Ask your administrator to invite you.", "error")
+            session.pop("pending_email", None)
+            return redirect(url_for("login"))
+
+        session.pop("pending_email", None)
+        next_url = session.pop("pending_next", "") or url_for("index")
+        session["email"] = pending_email
+        session["role"] = user["role"]
+        session["display_name"] = user.get("display_name", pending_email)
+        session["fleet_group"] = user.get("fleet_group")
+        session.permanent = True
+        return redirect(next_url)
+
+    return render_template("login_verify.html", email=pending_email)
 
 
 @app.route("/logout")
@@ -295,46 +390,12 @@ def logout():
     return redirect(url_for("login"))
 
 
-@app.route("/setup-account/<token>", methods=["GET", "POST"])
+@app.route("/setup-account/<token>")
 def setup_account(token):
-    """Set password via invite or reset link."""
-    if not USE_DB:
-        flash("Account setup requires database.", "error")
-        return redirect(url_for("login"))
-
-    user = database.db_get_user_by_token(token)
-    if not user:
-        flash("This link is invalid or has already been used.", "error")
-        return redirect(url_for("login"))
-
-    if user["invite_expires"] and user["invite_expires"] < datetime.now():
-        flash("This link has expired. Please ask your administrator to send a new invite.", "error")
-        return redirect(url_for("login"))
-
-    if request.method == "POST":
-        new_password = request.form.get("new_password", "")
-        confirm_password = request.form.get("confirm_password", "")
-
-        if not new_password or len(new_password) < 6:
-            flash("Password must be at least 6 characters.", "error")
-            return render_template("setup_account.html", user=user, token=token)
-
-        if new_password != confirm_password:
-            flash("Passwords do not match.", "error")
-            return render_template("setup_account.html", user=user, token=token)
-
-        pw_hash = generate_password_hash(new_password, method="pbkdf2:sha256")
-        database.db_set_password_and_clear_token(user["email"], pw_hash)
-
-        # Log them in
-        session["email"] = user["email"]
-        session["role"] = user["role"]
-        session["display_name"] = user.get("display_name", user["email"])
-        session["fleet_group"] = user.get("fleet_group")
-        session.permanent = True
-        return redirect(url_for("index"))
-
-    return render_template("setup_account.html", user=user, token=token)
+    """Deprecated: password setup has been replaced with emailed 6-digit codes.
+    Any legacy invite link just redirects to the sign-in page."""
+    flash("Sign-in has changed. Enter your email below and we'll send you a 6-digit code.", "info")
+    return redirect(url_for("login"))
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -1234,7 +1295,7 @@ def _build_notification_html(name, meta, review_url):
       <div style="text-align: center; margin: 28px 0;">
         <a href="{review_url}" style="background: #008CD1; color: #fff; padding: 14px 32px; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 15px;">Review Now</a>
       </div>
-      <p style="color: #5A6B7B; font-size: 13px;">Log in with your email and password to access your review.</p>
+      <p style="color: #5A6B7B; font-size: 13px;">Sign in with your Aeroseal email to access your review. We'll send you a 6-digit code.</p>
     </div>
     """
 
@@ -1255,18 +1316,33 @@ def _build_reminder_html(name, meta, review_url):
     """
 
 
-def _build_invite_html(name, setup_url):
+def _build_invite_html(name, sign_in_url):
     return f"""
     <div style="font-family: 'Figtree', Arial, sans-serif; max-width: 520px; margin: 0 auto; padding: 32px;">
       <div style="text-align: center; margin-bottom: 24px;">
         <div style="font-size: 22px; font-weight: 700; color: #005A90;">Aeroseal Fuel Review</div>
       </div>
       <p>Hi {name},</p>
-      <p>You've been invited to the Aeroseal Fleet Fuel Review system. Click the button below to set your password and get started.</p>
+      <p>You've been added to the Aeroseal Fleet Fuel Review system. When you're ready to sign in, visit the link below and enter your email. We'll send you a 6-digit code each time you sign in.</p>
       <div style="text-align: center; margin: 28px 0;">
-        <a href="{setup_url}" style="background: #008CD1; color: #fff; padding: 14px 32px; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 15px;">Set Up Your Account</a>
+        <a href="{sign_in_url}" style="background: #008CD1; color: #fff; padding: 14px 32px; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 15px;">Open Fuel Review</a>
       </div>
-      <p style="color: #5A6B7B; font-size: 13px;">This link expires in 48 hours. If it expires, ask your administrator to resend the invite.</p>
+      <p style="color: #5A6B7B; font-size: 13px;">No password to remember. Codes expire 15 minutes after they're sent.</p>
+    </div>
+    """
+
+
+def _build_code_email_html(code):
+    return f"""
+    <div style="font-family: 'Figtree', Arial, sans-serif; max-width: 520px; margin: 0 auto; padding: 32px;">
+      <div style="text-align: center; margin-bottom: 24px;">
+        <div style="font-size: 22px; font-weight: 700; color: #005A90;">Aeroseal Fuel Review</div>
+      </div>
+      <p>Use this 6-digit code to sign in:</p>
+      <div style="text-align: center; margin: 28px 0;">
+        <div style="display: inline-block; background: #F2F4F7; border: 1px solid #E4E7EB; border-radius: 12px; padding: 20px 32px; font-family: 'JetBrains Mono', Menlo, monospace; font-size: 32px; font-weight: 700; letter-spacing: 0.35em; color: #005A90;">{code}</div>
+      </div>
+      <p style="color: #5A6B7B; font-size: 13px; text-align: center;">This code expires in 15 minutes. If you didn't try to sign in, you can ignore this email.</p>
     </div>
     """
 
@@ -1404,7 +1480,8 @@ def admin_users():
 @app.route("/api/users/invite", methods=["POST"])
 @admin_required
 def invite_user():
-    """Create user with no password and send invite email."""
+    """Create a user and send a welcome email. No password is set; the user
+    signs in with their email via an emailed 6-digit code."""
     data = request.json
     email = data.get("email", "").strip().lower()
     role = data.get("role", "manager")
@@ -1417,29 +1494,25 @@ def invite_user():
     if USE_DB:
         if database.db_user_exists(email):
             return jsonify({"status": "error", "message": "Email already exists."}), 400
-
-        token = secrets.token_urlsafe(32)
-        database.db_create_invited_user(
-            email, display_name or email, role,
+        database.db_create_user(
+            email, None, display_name or email, role,
             fleet_group if role == "manager" else None,
-            token, session.get("email", "")
+            session.get("email", "")
         )
     else:
         return jsonify({"status": "error", "message": "Invite requires database."}), 500
 
-    # Send invite email
     resend_key = os.environ.get("RESEND_API_KEY")
     if resend_key:
         from_email = os.environ.get("FROM_EMAIL", "notifications@aeroseal.com")
-        app_url = request.host_url.rstrip("/")
-        setup_url = f"{app_url}/setup-account/{token}"
+        sign_in_url = request.host_url.rstrip("/") + "/login"
         try:
             _send_email(
                 api_key=resend_key,
                 from_email=from_email,
                 to_email=email,
                 subject="You're Invited to Aeroseal Fuel Review",
-                html=_build_invite_html(display_name or email, setup_url),
+                html=_build_invite_html(display_name or email, sign_in_url),
             )
         except Exception as e:
             return jsonify({"status": "ok", "warning": f"User created but email failed: {str(e)}"})
@@ -1450,23 +1523,19 @@ def invite_user():
 @app.route("/api/users/<path:username>/resend-invite", methods=["POST"])
 @admin_required
 def resend_invite(username):
-    """Resend invite or send password reset link."""
+    """Resend the welcome email so the user has the sign-in link again."""
     if not USE_DB:
         return jsonify({"status": "error", "message": "Requires database."}), 500
 
     if not database.db_user_exists(username):
         return jsonify({"status": "error", "message": "User not found."}), 404
 
-    token = secrets.token_urlsafe(32)
-    database.db_set_invite_token(username, token)
-
     resend_key = os.environ.get("RESEND_API_KEY")
     if not resend_key:
         return jsonify({"status": "error", "message": "RESEND_API_KEY not configured."}), 500
 
     from_email = os.environ.get("FROM_EMAIL", "notifications@aeroseal.com")
-    app_url = request.host_url.rstrip("/")
-    setup_url = f"{app_url}/setup-account/{token}"
+    sign_in_url = request.host_url.rstrip("/") + "/login"
 
     user = database.db_get_user(username)
     display_name = user.get("display_name", username) if user else username
@@ -1476,8 +1545,8 @@ def resend_invite(username):
             api_key=resend_key,
             from_email=from_email,
             to_email=username,
-            subject="Set Your Password - Aeroseal Fuel Review",
-            html=_build_invite_html(display_name, setup_url),
+            subject="Welcome to Aeroseal Fuel Review",
+            html=_build_invite_html(display_name, sign_in_url),
         )
     except Exception as e:
         return jsonify({"status": "error", "message": f"Email failed: {str(e)}"}), 500

@@ -69,10 +69,12 @@ def init_db():
             );
             ALTER TABLE users ADD COLUMN IF NOT EXISTS invite_token VARCHAR(64);
             ALTER TABLE users ADD COLUMN IF NOT EXISTS invite_expires TIMESTAMP;
+            ALTER TABLE users ADD COLUMN IF NOT EXISTS login_code VARCHAR(6);
+            ALTER TABLE users ADD COLUMN IF NOT EXISTS login_code_expires TIMESTAMP;
             ALTER TABLE users DROP COLUMN IF EXISTS must_change_password;
-            -- Allow NULL password_hash for invited users who haven't set a password yet
+            -- password_hash is retained as a nullable column for backward compatibility
+            -- but no longer written to; sign-in is emailed 6-digit code only.
             ALTER TABLE users ALTER COLUMN password_hash DROP NOT NULL;
-            -- Ensure invite tokens are unique (partial index, ignores NULLs)
             CREATE UNIQUE INDEX IF NOT EXISTS uq_invite_token
                 ON users (invite_token) WHERE invite_token IS NOT NULL;
 
@@ -191,7 +193,6 @@ def db_get_users():
         cur.execute("SELECT email, password_hash, display_name, role, fleet_group, invite_token, invite_expires, created_at, created_by, updated_at, updated_by FROM users")
         users = {}
         for row in cur.fetchall():
-            has_password = row[1] is not None and row[1] != ''
             users[row[0]] = {
                 "password_hash": row[1],
                 "display_name": row[2],
@@ -199,7 +200,7 @@ def db_get_users():
                 "fleet_group": row[4],
                 "invite_token": row[5],
                 "invite_expires": row[6].isoformat() if row[6] else None,
-                "status": "active" if has_password else "pending",
+                "status": "active",
                 "created_at": row[7].isoformat() if row[7] else None,
                 "created_by": row[8],
                 "updated_at": row[9].isoformat() if row[9] else None,
@@ -306,6 +307,43 @@ def db_user_count():
         cur = conn.cursor()
         cur.execute("SELECT COUNT(*) FROM users")
         return cur.fetchone()[0]
+
+
+def db_set_login_code(email, code, ttl_minutes=15):
+    """Store a 6-digit login code with expiration. Overwrites any prior code."""
+    with get_db() as conn:
+        cur = conn.cursor()
+        cur.execute(
+            "UPDATE users SET login_code = %s, login_code_expires = NOW() + (%s * INTERVAL '1 minute') WHERE email = %s",
+            (code, ttl_minutes, email)
+        )
+        return cur.rowcount > 0
+
+
+def db_verify_login_code(email, code):
+    """Return True if the code matches and is not expired. Does not clear on success."""
+    with get_db() as conn:
+        cur = conn.cursor()
+        cur.execute(
+            "SELECT login_code_expires FROM users WHERE email = %s AND login_code = %s",
+            (email, code)
+        )
+        row = cur.fetchone()
+        if not row:
+            return False
+        expires = row[0]
+        if not expires:
+            return False
+        return expires > datetime.now()
+
+
+def db_clear_login_code(email):
+    with get_db() as conn:
+        cur = conn.cursor()
+        cur.execute(
+            "UPDATE users SET login_code = NULL, login_code_expires = NULL WHERE email = %s",
+            (email,)
+        )
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
