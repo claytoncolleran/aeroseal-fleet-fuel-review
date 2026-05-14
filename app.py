@@ -1001,6 +1001,10 @@ def admin_reviews():
     """Review management hub — upload, process, notify, archive."""
     reviews = list_reviews()
     active = get_active_review()
+    # Hide the active review from the archive list while it's still in progress.
+    # Once marked complete it will reappear in the archive naturally.
+    if active and active.get("status") == "in_review":
+        reviews = [r for r in reviews if r.get("period") != active.get("period")]
     report = load_report() if active else {}
     decisions = load_decisions() if active else {}
 
