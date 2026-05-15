@@ -659,6 +659,86 @@ def db_get_decisions(review_id):
         return decisions
 
 
+# Rows that group by Sub Account (equipment, temporary, declined-equipment).
+# Vehicle rows are intentionally excluded - they keep their Fleetio group.
+_REGROUP_SELECTOR = (
+    "(card_type IN ('equipment','temporary') "
+    "OR (card_type = 'declined' AND vehicle_name IS NULL))"
+)
+_REGROUP_TARGET = "COALESCE(NULLIF(TRIM(sub_account), ''), 'Unassigned')"
+
+
+def db_preview_subaccount_regroup(review_id):
+    """Non-destructive preview of an in-place fleet_group re-group for a
+    review. Returns the (old -> new) moves for equipment/temp/declined-
+    equipment rows whose fleet_group differs from their Sub Account, plus
+    untouched vehicle row count and a count of non-transaction-linked
+    decisions (review work that will be left exactly as-is)."""
+    with get_db() as conn:
+        cur = conn.cursor()
+        cur.execute(
+            f"""SELECT fleet_group, {_REGROUP_TARGET} AS new_group, COUNT(*)
+                FROM transactions
+                WHERE review_id = %s AND {_REGROUP_SELECTOR}
+                  AND fleet_group IS DISTINCT FROM {_REGROUP_TARGET}
+                GROUP BY fleet_group, {_REGROUP_TARGET}
+                ORDER BY 3 DESC""",
+            (review_id,)
+        )
+        moves = [{"old": r[0], "new": r[1], "count": r[2]} for r in cur.fetchall()]
+
+        cur.execute(
+            f"""SELECT COUNT(*) FROM transactions
+                WHERE review_id = %s AND {_REGROUP_SELECTOR}""",
+            (review_id,)
+        )
+        total_regroupable = cur.fetchone()[0]
+
+        cur.execute(
+            "SELECT COUNT(*) FROM transactions WHERE review_id = %s AND card_type = 'vehicle'",
+            (review_id,)
+        )
+        vehicle_untouched = cur.fetchone()[0]
+
+        cur.execute(
+            "SELECT COUNT(*) FROM decisions WHERE review_id = %s AND transaction_id IS NULL",
+            (review_id,)
+        )
+        fallback_decisions = cur.fetchone()[0]
+
+        cur.execute(
+            "SELECT COUNT(*) FROM decisions WHERE review_id = %s AND transaction_id IS NOT NULL",
+            (review_id,)
+        )
+        vehicle_linked_decisions = cur.fetchone()[0]
+
+    return {
+        "moves": moves,
+        "rows_to_change": sum(m["count"] for m in moves),
+        "total_regroupable_rows": total_regroupable,
+        "vehicle_rows_untouched": vehicle_untouched,
+        "vehicle_linked_decisions_untouched": vehicle_linked_decisions,
+        "non_linked_decisions_left_as_is": fallback_decisions,
+    }
+
+
+def db_apply_subaccount_regroup(review_id):
+    """In-place UPDATE of fleet_group = Sub Account for equipment/temp/
+    declined-equipment rows. No DELETE, no re-insert. Idempotent (only
+    touches rows where the value actually differs). Returns rows changed.
+    Decisions, flags, submissions, and admin approvals are not touched."""
+    with get_db() as conn:
+        cur = conn.cursor()
+        cur.execute(
+            f"""UPDATE transactions
+                SET fleet_group = {_REGROUP_TARGET}
+                WHERE review_id = %s AND {_REGROUP_SELECTOR}
+                  AND fleet_group IS DISTINCT FROM {_REGROUP_TARGET}""",
+            (review_id,)
+        )
+        return cur.rowcount
+
+
 def db_save_group_submission(review_id, fleet_group, manager_name, submitted_by):
     with get_db() as conn:
         cur = conn.cursor()

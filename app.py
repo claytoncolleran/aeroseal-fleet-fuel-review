@@ -891,6 +891,49 @@ def generate_report(period=None):
                            generated_at=datetime.now().strftime("%Y-%m-%d %H:%M"))
 
 
+@app.route("/admin/regroup-subaccounts/<period>", methods=["GET", "POST"])
+@admin_required
+def regroup_subaccounts(period):
+    """Safe, in-place re-group of an already-processed review so equipment/
+    temp/declined-equipment rows carry their Sub Account as fleet_group
+    (instead of the stale value from before the data-driven mapping).
+
+    Non-destructive: UPDATE only, no DELETE/re-insert, so every decision,
+    flag, group submission, and admin sign-off is preserved. Vehicle rows
+    are not touched. Idempotent (only rows whose value differs change).
+
+    GET = preview (no writes). POST = apply."""
+    if not USE_DB:
+        return jsonify({"status": "error",
+                         "message": "Re-group requires DATABASE_URL (production only)."}), 400
+
+    review = database.db_get_review(period)
+    if not review:
+        return jsonify({"status": "error", "message": f"No review found for {period}"}), 404
+    review_id = review["id"]
+
+    preview = database.db_preview_subaccount_regroup(review_id)
+    preview["period"] = period
+
+    if request.method == "GET":
+        preview["status"] = "preview"
+        preview["next_step"] = (
+            f"POST to this same URL to re-group {preview['rows_to_change']} "
+            f"equipment/temp rows in place. Nothing else is modified."
+        )
+        return jsonify(preview), 200
+
+    changed = database.db_apply_subaccount_regroup(review_id)
+    preview["status"] = "applied"
+    preview["rows_changed"] = changed
+    preview["message"] = (
+        f"Re-grouped {changed} equipment/temp rows for {period} in place. "
+        f"Decisions, flags, submissions, and the admin sign-off were not "
+        f"touched. View the updated report at /admin/report/{period}."
+    )
+    return jsonify(preview), 200
+
+
 @app.route("/admin/backfill-equipment/<period>", methods=["GET", "POST"])
 @admin_required
 def backfill_equipment(period):
