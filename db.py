@@ -160,6 +160,11 @@ def init_db():
                 reviewer VARCHAR(255),
                 reviewed_at TIMESTAMP DEFAULT NOW()
             );
+            -- Persist the exact txn_key so every card type (vehicle,
+            -- EQUIP_, TEMP_, DECLINED_) round-trips without reconstructing
+            -- it from vehicle fields. Legacy rows stay NULL and fall back
+            -- to the old reconstruction.
+            ALTER TABLE decisions ADD COLUMN IF NOT EXISTS txn_key TEXT;
 
             CREATE TABLE IF NOT EXISTS group_submissions (
                 id SERIAL PRIMARY KEY,
@@ -583,18 +588,25 @@ def db_save_decision(review_id, txn_key, fleet_group, action, reason, reviewer):
         row = cur.fetchone()
         txn_id = row[0] if row else None
 
-        # Upsert decision
+        # Upsert decision. txn_key is persisted verbatim so every card
+        # type round-trips; transaction_id is still linked when resolvable
+        # (keeps vehicle FK cascade behavior).
         if txn_id:
             cur.execute("DELETE FROM decisions WHERE review_id = %s AND transaction_id = %s", (review_id, txn_id))
             cur.execute(
-                "INSERT INTO decisions (review_id, transaction_id, fleet_group, action, reason, reviewer) VALUES (%s,%s,%s,%s,%s,%s)",
-                (review_id, txn_id, fleet_group, action, reason, reviewer)
+                "INSERT INTO decisions (review_id, transaction_id, fleet_group, action, reason, reviewer, txn_key) VALUES (%s,%s,%s,%s,%s,%s,%s)",
+                (review_id, txn_id, fleet_group, action, reason, reviewer, txn_key)
             )
         else:
-            # Fallback: store without transaction_id (for temp/declined cards)
+            # No transaction_id (equipment/temp/declined): key on
+            # (review_id, txn_key) so re-acknowledging updates in place.
             cur.execute(
-                "INSERT INTO decisions (review_id, fleet_group, action, reason, reviewer) VALUES (%s,%s,%s,%s,%s)",
-                (review_id, fleet_group, action, reason, reviewer)
+                "DELETE FROM decisions WHERE review_id = %s AND transaction_id IS NULL AND txn_key = %s",
+                (review_id, txn_key)
+            )
+            cur.execute(
+                "INSERT INTO decisions (review_id, fleet_group, action, reason, reviewer, txn_key) VALUES (%s,%s,%s,%s,%s,%s)",
+                (review_id, fleet_group, action, reason, reviewer, txn_key)
             )
 
 
@@ -604,7 +616,7 @@ def db_get_decisions(review_id):
         cur = conn.cursor()
         cur.execute(
             """SELECT d.fleet_group, t.vehicle_name, t.transaction_date, t.transaction_time,
-                      d.action, d.reason, d.reviewer, d.reviewed_at
+                      d.action, d.reason, d.reviewer, d.reviewed_at, d.txn_key
                FROM decisions d
                LEFT JOIN transactions t ON d.transaction_id = t.id
                WHERE d.review_id = %s""",
@@ -615,9 +627,15 @@ def db_get_decisions(review_id):
             group = row[0] or "Unknown"
             if group not in decisions:
                 decisions[group] = {}
-            if row[1] and row[2] and row[3]:
+            if row[8]:
+                # Stored txn_key (new rows): exact round-trip for every
+                # card type, including EQUIP_/TEMP_/DECLINED_.
+                txn_key = row[8]
+            elif row[1] and row[2] and row[3]:
+                # Legacy vehicle decision (pre-txn_key column).
                 txn_key = f"{row[1]}_{row[2]}_{row[3]}"
             else:
+                # Legacy non-linked decision.
                 txn_key = f"_decision_{row[6]}_{row[7].isoformat() if row[7] else ''}"
             decisions[group][txn_key] = {
                 "action": row[4],
