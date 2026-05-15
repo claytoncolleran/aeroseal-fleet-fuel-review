@@ -1596,6 +1596,36 @@ def admin_users():
                            fleet_groups=fleet_groups, sub_accounts=sub_accounts)
 
 
+@app.route("/api/sub-accounts/sync", methods=["POST"])
+@admin_required
+def sync_sub_accounts():
+    """Populate the sub-account mapping list from already-stored reviews
+    instead of waiting for a fresh upload. Reads the Sub Account values on
+    equipment/temp transactions of every existing review and registers any
+    not yet known. Idempotent; only writes the sub_accounts table."""
+    seen = set()
+    scanned = []
+    for r in list_reviews():
+        period = r.get("period")
+        if not period:
+            continue
+        rep = load_report(period)
+        for t in rep.get("equipment_cards", []) + rep.get("temporary_cards", []):
+            sa = (t.get("sub_account") or "").strip()
+            if sa:
+                seen.add(sa)
+        scanned.append(period)
+
+    added = add_sub_accounts(sorted(seen))
+    return jsonify({
+        "status": "ok",
+        "added": added,
+        "added_count": len(added),
+        "total_known": len(load_sub_accounts()),
+        "reviews_scanned": scanned,
+    })
+
+
 @app.route("/api/users/invite", methods=["POST"])
 @admin_required
 def invite_user():
