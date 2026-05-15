@@ -29,6 +29,7 @@ BASELINES_FILE = os.path.join(DATA_DIR, "mpg_baselines.json")
 # Persistent storage: /var/data on Render, local data/ in development
 PERSIST_DIR = "/var/data" if os.path.isdir("/var/data") else DATA_DIR
 USERS_FILE = os.path.join(PERSIST_DIR, "users.json")
+SUB_ACCOUNTS_FILE = os.path.join(PERSIST_DIR, "sub_accounts.json")
 REVIEWS_DIR = os.path.join(PERSIST_DIR, "reviews")
 os.makedirs(REVIEWS_DIR, exist_ok=True)
 
@@ -186,6 +187,29 @@ def save_users(users):
         json.dump(users, f, indent=2)
 
 
+def load_sub_accounts():
+    """Return the sorted list of known sub-account names."""
+    if USE_DB:
+        return database.db_list_sub_accounts()
+    if os.path.exists(SUB_ACCOUNTS_FILE):
+        with open(SUB_ACCOUNTS_FILE) as f:
+            return sorted(json.load(f))
+    return []
+
+
+def add_sub_accounts(names):
+    """Idempotently register sub-account names. Returns newly added ones."""
+    names = [n for n in names if n]
+    if USE_DB:
+        return database.db_add_sub_accounts(names)
+    existing = set(load_sub_accounts())
+    new = sorted(set(names) - existing)
+    if new:
+        with open(SUB_ACCOUNTS_FILE, "w") as f:
+            json.dump(sorted(existing | set(names)), f, indent=2)
+    return new
+
+
 def init_default_admin():
     """Create default admin account if no users exist. No password is set;
     admin signs in with their email via an emailed 6-digit code."""
@@ -206,6 +230,7 @@ def init_default_admin():
                 "role": "admin",
                 "display_name": "Administrator",
                 "fleet_group": None,
+                "sub_accounts": [],
                 "created_at": datetime.now().isoformat(),
             }
             save_users(users)
@@ -1100,6 +1125,38 @@ def create_review():
 
     created_by = session.get("email", "")
 
+    # ── Sub-account detection (forward-only; no stored data touched) ──
+    # Equipment/temporary cards group by their raw Sub Account string. Register
+    # any Sub Account values seen here, and warn the admin about brand-new ones
+    # and any that have no manager mapped yet. Never blocks the upload.
+    sub_account_warnings = []
+    if report:
+        seen = set()
+        for t in report.get("equipment_cards", []) + report.get("temporary_cards", []):
+            sa = (t.get("sub_account") or "").strip()
+            if sa:
+                seen.add(sa)
+        if seen:
+            newly_added = add_sub_accounts(sorted(seen))
+            mapped = set()
+            for u in load_users().values():
+                if u.get("role") == "manager":
+                    mapped.update(u.get("sub_accounts") or [])
+            unmapped = sorted(seen - mapped)
+            if newly_added:
+                sub_account_warnings.append(
+                    "New sub-account(s) detected and added to the mapping list: "
+                    + ", ".join(newly_added)
+                    + ". Assign a manager to each in User Management."
+                )
+            if unmapped:
+                sub_account_warnings.append(
+                    "Sub-account(s) with no manager mapped: "
+                    + ", ".join(unmapped)
+                    + ". Their equipment/temp spend will show as Unassigned "
+                      "until mapped in User Management."
+                )
+
     if USE_DB:
         # Create review in database
         review_id = database.db_create_review(period, label or f"{period} Fuel Review",
@@ -1154,7 +1211,8 @@ def create_review():
         }
         save_review_meta(period, meta)
 
-    return jsonify({"status": "ok", "period": period})
+    return jsonify({"status": "ok", "period": period,
+                    "warnings": sub_account_warnings})
 
 
 @app.route("/api/reviews/<period>/notify", methods=["POST"])

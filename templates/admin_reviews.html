@@ -152,8 +152,15 @@ function processReview() {
     .then(r => r.json())
     .then(resp => {
       if (resp.status === 'ok') {
-        showMsg('upload-success', 'Review processed successfully! Reloading...', false);
-        setTimeout(() => location.reload(), 1500);
+        const warnings = resp.warnings || [];
+        if (warnings.length) {
+          showMsg('upload-error',
+            'Review processed. Action needed: ' + warnings.join('  |  '), true);
+          setTimeout(() => location.reload(), 8000);
+        } else {
+          showMsg('upload-success', 'Review processed successfully! Reloading...', false);
+          setTimeout(() => location.reload(), 1500);
+        }
       } else {
         showMsg('upload-error', resp.message || 'Processing failed.', true);
         btn.disabled = false;

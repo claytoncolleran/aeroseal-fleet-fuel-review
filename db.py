@@ -78,6 +78,18 @@ def init_db():
             CREATE UNIQUE INDEX IF NOT EXISTS uq_invite_token
                 ON users (invite_token) WHERE invite_token IS NOT NULL;
 
+            -- Canonical list of Sub Account names seen in uploaded reports.
+            -- The sub-account string IS the fleet group for equipment/temp
+            -- cards; no surrogate id needed.
+            CREATE TABLE IF NOT EXISTS sub_accounts (
+                name VARCHAR(255) PRIMARY KEY,
+                created_at TIMESTAMP DEFAULT NOW()
+            );
+            -- Managers' assigned sub-accounts, stored as a JSON array of
+            -- names. Many-to-many without a join table: a name appearing on
+            -- multiple users means multiple managers for that sub-account.
+            ALTER TABLE users ADD COLUMN IF NOT EXISTS sub_accounts TEXT;
+
             CREATE TABLE IF NOT EXISTS reviews (
                 id SERIAL PRIMARY KEY,
                 period VARCHAR(7) NOT NULL UNIQUE,
@@ -190,9 +202,13 @@ def db_get_users():
     """Return all users as dict keyed by email."""
     with get_db() as conn:
         cur = conn.cursor()
-        cur.execute("SELECT email, password_hash, display_name, role, fleet_group, invite_token, invite_expires, created_at, created_by, updated_at, updated_by FROM users")
+        cur.execute("SELECT email, password_hash, display_name, role, fleet_group, invite_token, invite_expires, created_at, created_by, updated_at, updated_by, sub_accounts FROM users")
         users = {}
         for row in cur.fetchall():
+            try:
+                sub_accts = json.loads(row[11]) if row[11] else []
+            except (ValueError, TypeError):
+                sub_accts = []
             users[row[0]] = {
                 "password_hash": row[1],
                 "display_name": row[2],
@@ -205,6 +221,7 @@ def db_get_users():
                 "created_by": row[8],
                 "updated_at": row[9].isoformat() if row[9] else None,
                 "updated_by": row[10],
+                "sub_accounts": sub_accts,
             }
         return users
 
@@ -283,6 +300,10 @@ def db_update_user(email, **kwargs):
             if key in kwargs and kwargs[key] is not None:
                 sets.append(f"{key} = %s")
                 vals.append(kwargs[key])
+        # sub_accounts is a list -> stored as JSON text. Allow [] (clearing).
+        if "sub_accounts" in kwargs and kwargs["sub_accounts"] is not None:
+            sets.append("sub_accounts = %s")
+            vals.append(json.dumps(kwargs["sub_accounts"]))
         if sets:
             sets.append("updated_at = NOW()")
             vals.append(email)
@@ -293,6 +314,33 @@ def db_delete_user(email):
     with get_db() as conn:
         cur = conn.cursor()
         cur.execute("DELETE FROM users WHERE email = %s", (email,))
+
+
+def db_list_sub_accounts():
+    """Return all known sub-account names, sorted."""
+    with get_db() as conn:
+        cur = conn.cursor()
+        cur.execute("SELECT name FROM sub_accounts ORDER BY name")
+        return [row[0] for row in cur.fetchall()]
+
+
+def db_add_sub_accounts(names):
+    """Idempotently register sub-account names. Returns the subset that were
+    newly inserted (i.e., not previously known)."""
+    new = []
+    with get_db() as conn:
+        cur = conn.cursor()
+        for name in names:
+            if not name:
+                continue
+            cur.execute(
+                "INSERT INTO sub_accounts (name) VALUES (%s) "
+                "ON CONFLICT (name) DO NOTHING",
+                (name,)
+            )
+            if cur.rowcount:
+                new.append(name)
+    return sorted(new)
 
 
 def db_user_exists(email):

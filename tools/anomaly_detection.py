@@ -866,7 +866,7 @@ def run(corpay_file=None, baselines_file=None, output_file=None, flag_settings=N
             "card_no": row.get("Card No."),
             "sub_account": row.get("Sub Account"),
             "fleet_group": (vehicle.get("group_name", "Unassigned") if vehicle
-                            else infer_group_from_subaccount(row.get("Sub Account"))),
+                            else (row.get("Sub Account") or "Unassigned")),
         })
 
     # ── Build temporary card records ──
@@ -889,7 +889,7 @@ def run(corpay_file=None, baselines_file=None, output_file=None, flag_settings=N
             "odometer": safe_float(row.get("Odometer")),
             "card_no": row.get("Card No."),
             "sub_account": row.get("Sub Account"),
-            "fleet_group": infer_group_from_subaccount(row.get("Sub Account")),
+            "fleet_group": row.get("Sub Account") or "Unassigned",
         })
 
     # ── Build equipment card records with flags 7 and 8 ──
@@ -899,7 +899,7 @@ def run(corpay_file=None, baselines_file=None, output_file=None, flag_settings=N
     # defaults (no odometer entered at pump).
     equipment_records = []
     for row in equipment_txns:
-        group = infer_group_from_subaccount(row.get("Sub Account"))
+        group = row.get("Sub Account") or "Unassigned"
         net = safe_float(row.get("Net Price")) or 0
         gal = safe_float(row.get("Unit/Gallons")) or 0
         ppg = safe_float(row.get("Gross PPU/PPG")) or 0
