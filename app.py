@@ -1549,7 +1549,9 @@ def admin_users():
     users = load_users()
     report = load_report()
     fleet_groups = sorted(report.get("group_summary", {}).keys())
-    return render_template("admin_users.html", users=users, fleet_groups=fleet_groups)
+    sub_accounts = load_sub_accounts()
+    return render_template("admin_users.html", users=users,
+                           fleet_groups=fleet_groups, sub_accounts=sub_accounts)
 
 
 @app.route("/api/users/invite", methods=["POST"])
@@ -1562,6 +1564,9 @@ def invite_user():
     role = data.get("role", "manager")
     display_name = data.get("display_name", "")
     fleet_group = data.get("fleet_group") or None
+    sub_accts = data.get("sub_accounts") or []
+    if role != "manager":
+        sub_accts = []
 
     if not email:
         return jsonify({"status": "error", "message": "Email is required."}), 400
@@ -1574,6 +1579,9 @@ def invite_user():
             fleet_group if role == "manager" else None,
             session.get("email", "")
         )
+        if sub_accts:
+            database.db_update_user(email, sub_accounts=sub_accts,
+                                    updated_by=session.get("email", ""))
     else:
         return jsonify({"status": "error", "message": "Invite requires database."}), 500
 
@@ -1644,6 +1652,9 @@ def update_user(username):
             kwargs["role"] = data["role"]
         if data.get("fleet_group") is not None:
             kwargs["fleet_group"] = data["fleet_group"]
+        if data.get("sub_accounts") is not None:
+            role = data.get("role")
+            kwargs["sub_accounts"] = data["sub_accounts"] if role != "admin" else []
         database.db_update_user(username, **kwargs)
     else:
         users = load_users()
@@ -1656,6 +1667,8 @@ def update_user(username):
             user["role"] = data["role"]
         if data.get("fleet_group") is not None:
             user["fleet_group"] = data["fleet_group"] if user["role"] == "manager" else None
+        if data.get("sub_accounts") is not None:
+            user["sub_accounts"] = data["sub_accounts"] if user["role"] != "admin" else []
         user["updated_at"] = datetime.now().isoformat()
         user["updated_by"] = session.get("email", "")
         save_users(users)

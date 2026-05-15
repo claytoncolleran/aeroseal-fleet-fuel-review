@@ -29,17 +29,41 @@
       </select>
     </div>
     <div id="group-select-wrap">
-      <label class="form-label" style="display: block; font-size: 12px; font-weight: 600; color: var(--aeroseal-midnight-blue); margin-bottom: 4px;">Fleet Group</label>
+      <label class="form-label" style="display: block; font-size: 12px; font-weight: 600; color: var(--aeroseal-midnight-blue); margin-bottom: 4px;">Fleet Group <span style="font-weight:400; color:#7A8896;">(vehicle cards, from Fleetio)</span></label>
       <select id="new-group" style="font-family: var(--font-primary); font-size: 14px; padding: 10px 12px; border: 1px solid var(--aeroseal-titanium); border-radius: 6px; width: 100%; background: #fff;">
         <option value="">Select group...</option>
         {% for g in fleet_groups %}
         <option value="{{ g }}">{{ g }}</option>
         {% endfor %}
       </select>
+      <label class="form-label" style="display: block; font-size: 12px; font-weight: 600; color: var(--aeroseal-midnight-blue); margin: 10px 0 4px;">Sub-Accounts <span style="font-weight:400; color:#7A8896;">(equipment/temp; multi-select)</span></label>
+      <select id="new-subaccounts" multiple size="5" style="font-family: var(--font-primary); font-size: 13px; padding: 6px 8px; border: 1px solid var(--aeroseal-titanium); border-radius: 6px; width: 100%; background: #fff;">
+        {% for sa in sub_accounts %}
+        <option value="{{ sa }}">{{ sa }}</option>
+        {% endfor %}
+      </select>
+      {% if not sub_accounts %}<div style="font-size:11px; color:#7A8896; margin-top:4px;">No sub-accounts known yet. They appear here automatically after the first report upload.</div>{% endif %}
     </div>
     <div>
       <button class="btn btn-approve" style="padding: 10px 20px; font-size: 14px; white-space: nowrap;" onclick="inviteUser()">Invite User</button>
     </div>
+  </div>
+</div>
+
+<!-- Known Sub-Accounts (read-only reference) -->
+<div class="card" style="padding: 16px 24px; margin-bottom: 24px;">
+  <div style="font-size: 13px; font-weight: 700; color: var(--aeroseal-steel-blue); margin-bottom: 6px;">
+    Known Sub-Accounts ({{ sub_accounts|length }})
+  </div>
+  <div style="font-size: 12px; color: #5A6B7B; margin-bottom: 8px;">
+    Auto-discovered from uploaded reports. Map each to one or more managers below. Equipment/temp spend on a sub-account with no manager shows as Unassigned until mapped.
+  </div>
+  <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+    {% for sa in sub_accounts %}
+    <span style="background:#EEF4F8; color:var(--aeroseal-midnight-blue); padding:3px 10px; border-radius:12px; font-size:12px;">{{ sa }}</span>
+    {% else %}
+    <span style="font-size:12px; color:#7A8896;">None yet.</span>
+    {% endfor %}
   </div>
 </div>
 
@@ -57,6 +81,7 @@
         <th>Display Name</th>
         <th>Role</th>
         <th>Fleet Group</th>
+        <th>Sub-Accounts</th>
         <th>Status</th>
         <th>Actions</th>
       </tr>
@@ -74,6 +99,9 @@
           {% endif %}
         </td>
         <td>{{ user.get('fleet_group', '') or '' }}</td>
+        <td style="font-size: 12px; color: #5A6B7B;">
+          {{ (user.get('sub_accounts') or [])|join(', ') }}
+        </td>
         <td>
           {% if user.get('status') == 'active' %}
             <span style="background: #E8F5E9; color: #2E7D32; padding: 2px 10px; border-radius: 12px; font-size: 11px; font-weight: 600;">Active</span>
@@ -83,7 +111,7 @@
         </td>
         <td>
           {% if email != current_user.email %}
-            <button class="btn btn-sm" style="font-size: 11px; padding: 4px 12px; background: transparent; color: var(--aeroseal-steel-blue); border: 1px solid var(--aeroseal-steel-blue); border-radius: 4px; cursor: pointer;" onclick="openEditModal('{{ email }}', '{{ user.get('display_name', '') }}', '{{ user.get('role', 'manager') }}', '{{ user.get('fleet_group', '') }}')">Edit</button>
+            <button class="btn btn-sm" style="font-size: 11px; padding: 4px 12px; background: transparent; color: var(--aeroseal-steel-blue); border: 1px solid var(--aeroseal-steel-blue); border-radius: 4px; cursor: pointer;" onclick="openEditModal('{{ email }}')">Edit</button>
             <button class="btn btn-sm" style="font-size: 11px; padding: 4px 12px; background: transparent; color: var(--aeroseal-sapphire); border: 1px solid var(--aeroseal-sapphire); border-radius: 4px; cursor: pointer; margin-left: 4px;" onclick="resendInvite('{{ email }}')">
               Resend Welcome Email
             </button>
@@ -122,7 +150,7 @@
         </select>
       </div>
       <div id="edit-group-wrap">
-        <label class="form-label" style="display:block; font-size:12px; font-weight:600; color:var(--aeroseal-midnight-blue); margin-bottom:4px;">Fleet Group</label>
+        <label class="form-label" style="display:block; font-size:12px; font-weight:600; color:var(--aeroseal-midnight-blue); margin-bottom:4px;">Fleet Group <span style="font-weight:400; color:#7A8896;">(vehicle, Fleetio)</span></label>
         <select id="edit-group" style="font-family:var(--font-primary); font-size:14px; padding:10px 12px; border:1px solid var(--aeroseal-titanium); border-radius:6px; width:100%; background:#fff;">
           <option value="">Select group...</option>
           {% for g in fleet_groups %}
@@ -130,6 +158,15 @@
           {% endfor %}
         </select>
       </div>
+    </div>
+    <div id="edit-subaccounts-wrap" style="margin-bottom:20px;">
+      <label class="form-label" style="display:block; font-size:12px; font-weight:600; color:var(--aeroseal-midnight-blue); margin-bottom:4px;">Sub-Accounts <span style="font-weight:400; color:#7A8896;">(equipment/temp; multi-select, multiple managers allowed)</span></label>
+      <select id="edit-subaccounts" multiple size="6" style="font-family:var(--font-primary); font-size:13px; padding:6px 8px; border:1px solid var(--aeroseal-titanium); border-radius:6px; width:100%; background:#fff;">
+        {% for sa in sub_accounts %}
+        <option value="{{ sa }}">{{ sa }}</option>
+        {% endfor %}
+      </select>
+      {% if not sub_accounts %}<div style="font-size:11px; color:#7A8896; margin-top:4px;">No sub-accounts known yet. They appear after the first report upload.</div>{% endif %}
     </div>
     <div style="display:flex; justify-content:flex-end; gap:8px;">
       <button style="padding:10px 20px; font-size:14px; border:1px solid var(--aeroseal-titanium); border-radius:6px; background:#fff; color:var(--aeroseal-midnight-blue); cursor:pointer;" onclick="closeEditModal()">Cancel</button>
@@ -141,6 +178,16 @@
 
 {% block scripts %}
 <script>
+const USERS = {{ users|tojson }};
+
+function getSelected(id) {
+  return Array.from(document.getElementById(id).selectedOptions).map(o => o.value);
+}
+function setSelected(id, values) {
+  const set = new Set(values || []);
+  for (const opt of document.getElementById(id).options) opt.selected = set.has(opt.value);
+}
+
 function toggleGroupSelect() {
   const role = document.getElementById('new-role').value;
   document.getElementById('group-select-wrap').style.display = role === 'manager' ? 'block' : 'none';
@@ -159,6 +206,7 @@ function inviteUser() {
     display_name: document.getElementById('new-display').value.trim(),
     role: document.getElementById('new-role').value,
     fleet_group: document.getElementById('new-group').value,
+    sub_accounts: getSelected('new-subaccounts'),
   };
 
   if (!data.email) {
@@ -198,12 +246,14 @@ function resendInvite(email) {
 }
 
 // ─── Edit Modal ───
-function openEditModal(email, displayName, role, fleetGroup) {
+function openEditModal(email) {
+  const u = USERS[email] || {};
   document.getElementById('edit-email-key').value = email;
   document.getElementById('edit-email-display').value = email;
-  document.getElementById('edit-display').value = displayName;
-  document.getElementById('edit-role').value = role;
-  document.getElementById('edit-group').value = fleetGroup || '';
+  document.getElementById('edit-display').value = u.display_name || '';
+  document.getElementById('edit-role').value = u.role || 'manager';
+  document.getElementById('edit-group').value = u.fleet_group || '';
+  setSelected('edit-subaccounts', u.sub_accounts || []);
   toggleEditGroup();
   document.getElementById('edit-modal').style.display = 'flex';
 }
@@ -214,17 +264,19 @@ function closeEditModal() {
 }
 
 function toggleEditGroup() {
-  const role = document.getElementById('edit-role').value;
-  document.getElementById('edit-group-wrap').style.display = role === 'manager' ? 'block' : 'none';
+  const isManager = document.getElementById('edit-role').value === 'manager';
+  document.getElementById('edit-group-wrap').style.display = isManager ? 'block' : 'none';
+  document.getElementById('edit-subaccounts-wrap').style.display = isManager ? 'block' : 'none';
 }
 
 function saveEdit() {
   const email = document.getElementById('edit-email-key').value;
+  const isManager = document.getElementById('edit-role').value === 'manager';
   const data = {
     display_name: document.getElementById('edit-display').value.trim(),
     role: document.getElementById('edit-role').value,
-    fleet_group: document.getElementById('edit-role').value === 'manager'
-      ? document.getElementById('edit-group').value : '',
+    fleet_group: isManager ? document.getElementById('edit-group').value : '',
+    sub_accounts: isManager ? getSelected('edit-subaccounts') : [],
   };
 
   fetch('/api/users/' + encodeURIComponent(email), {
