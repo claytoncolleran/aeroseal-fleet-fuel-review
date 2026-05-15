@@ -321,7 +321,7 @@
       {% for g in group_data %}
       <tr>
         <td><strong>{{ g.name }}</strong></td>
-        <td>{{ g.summary.get('total_txns', 0) }}</td>
+        <td>{{ g.txn_count }}</td>
         <td>{{ g.summary.get('flagged_txns', 0) + g.equipment_flag_count }}</td>
         <td>{{ g.approved + g.equipment_approved }}</td>
         <td>

@@ -781,6 +781,13 @@ def generate_report(period=None):
         equipment_grand_total += equipment_spend
 
         g_txns = [t for t in report.get("transactions", []) if t["fleet_group"] == g]
+        g_declined_count = sum(1 for t in report.get("declined_transactions", [])
+                               if t.get("fleet_group") == g)
+        # Real total for this row: vehicle + temp + equipment + declined.
+        # group_summary.total_txns is vehicle-only, so sub-account rows
+        # would otherwise show 0 despite having equipment/temp spend.
+        txn_count = (len(g_txns) + temp_count_by_group.get(g, 0)
+                     + equipment_count_by_group.get(g, 0) + g_declined_count)
         flagged = []
         for t in g_txns:
             if t["flag_count"] > 0:
@@ -811,6 +818,7 @@ def generate_report(period=None):
         group_data.append({
             "name": g,
             "summary": g_summary,
+            "txn_count": txn_count,
             "submission": submission,
             "managers": managers_for_group(g, users_cache),
             "flagged": flagged,

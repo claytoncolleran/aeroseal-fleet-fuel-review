@@ -770,6 +770,40 @@ def db_save_group_submission(review_id, fleet_group, manager_name, submitted_by)
         )
 
 
+def _categorize_fuel(product_desc):
+    """Mirror of anomaly_detection.categorize_fuel so the rebuilt report can
+    reconstruct fuel-type medians from stored rows without importing tools/."""
+    desc = (product_desc or "").upper()
+    if "DIESEL" in desc:
+        return "Diesel"
+    if "PREMIUM" in desc:
+        return "Premium"
+    if "PLUS" in desc or "MIDGRADE" in desc or "89" in desc:
+        return "Midgrade"
+    if "UNLEADED" in desc or "REGULAR" in desc or "86" in desc or "87" in desc:
+        return "Regular Unleaded"
+    if "E85" in desc:
+        return "E85"
+    return "Unknown"
+
+
+def _fuel_type_medians(transactions):
+    """Median gross $/gal per fuel category from stored vehicle rows."""
+    prices = {}
+    for t in transactions:
+        ppg = t.get("gross_ppg")
+        if ppg and ppg > 0:
+            prices.setdefault(_categorize_fuel(t.get("product")), []).append(ppg)
+    medians = {}
+    for cat, vals in prices.items():
+        vals.sort()
+        n = len(vals)
+        mid = n // 2
+        med = (vals[mid - 1] + vals[mid]) / 2 if n % 2 == 0 else vals[mid]
+        medians[cat] = round(med, 3)
+    return medians
+
+
 def db_build_report(period):
     """Reconstruct the full anomaly report from database tables."""
     review = db_get_review(period)
@@ -923,6 +957,7 @@ def db_build_report(period):
             "temporary_card_transactions": len(temporary_cards),
             "equipment_transactions_excluded": len(equipment_cards),
             "declined_transactions": len(declined_transactions),
+            "fuel_type_medians": _fuel_type_medians(transactions),
         }
 
         return {
