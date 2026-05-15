@@ -210,6 +210,32 @@ def add_sub_accounts(names):
     return new
 
 
+def manager_groups(user):
+    """All group keys a manager is responsible for: their Fleetio vehicle
+    group (a manager-name string) plus every assigned sub-account."""
+    groups = []
+    fg = user.get("fleet_group")
+    if fg:
+        groups.append(fg)
+    groups.extend(user.get("sub_accounts") or [])
+    return groups
+
+
+def managers_for_group(group_name, users=None):
+    """Display names of manager users responsible for a group key, whether
+    it's a Fleetio vehicle group (matches their fleet_group) or a
+    sub-account (in their sub_accounts list). Multiple managers possible."""
+    if users is None:
+        users = load_users()
+    names = []
+    for email, u in users.items():
+        if u.get("role") != "manager":
+            continue
+        if u.get("fleet_group") == group_name or group_name in (u.get("sub_accounts") or []):
+            names.append(u.get("display_name") or email)
+    return sorted(set(names))
+
+
 def init_default_admin():
     """Create default admin account if no users exist. No password is set;
     admin signs in with their email via an emailed 6-digit code."""
@@ -441,10 +467,15 @@ def index():
         groups = sorted(all_group_summary.keys())
         summary = report.get("summary", {})
     else:
-        # Managers: filter stats to their group only
+        # Managers: their Fleetio vehicle group plus any assigned sub-account
+        # that has data this period.
+        present = set(all_group_summary.keys())
+        for t in report.get("equipment_cards", []) + report.get("temporary_cards", []):
+            if t.get("fleet_group"):
+                present.add(t["fleet_group"])
+        groups = [g for g in manager_groups(user) if g in present]
         assigned = user.get("fleet_group")
-        groups = [assigned] if assigned and assigned in all_group_summary else []
-        if groups:
+        if assigned and assigned in all_group_summary:
             gs = all_group_summary.get(assigned, {})
             summary = {
                 "total_vehicle_transactions_analyzed": gs.get("total_txns", 0),
@@ -470,7 +501,7 @@ def index():
 @login_required
 def group_view(group_name):
     user = get_current_user()
-    if user["role"] != "admin" and user.get("fleet_group") != group_name:
+    if user["role"] != "admin" and group_name not in manager_groups(user):
         flash("You don't have access to this fleet group.", "error")
         return redirect(url_for("index"))
 
@@ -574,7 +605,15 @@ def submit_group():
         try:
             report = load_report()
             all_decisions = load_decisions()
+            # Groups that actually need a manager submission: vehicle groups,
+            # plus any sub-account with flagged equipment or any temp cards.
             all_groups = set(report.get("group_summary", {}).keys())
+            for t in report.get("equipment_cards", []):
+                if t.get("flag_count", 0) > 0 and t.get("fleet_group"):
+                    all_groups.add(t["fleet_group"])
+            for t in report.get("temporary_cards", []):
+                if t.get("fleet_group"):
+                    all_groups.add(t["fleet_group"])
             submitted_groups = {g for g in all_groups
                                 if all_decisions.get(g, {}).get("_submission")}
             if all_groups and submitted_groups == all_groups:
@@ -695,6 +734,8 @@ def generate_report(period=None):
     # against the active review).
     report_readonly = bool(period) and (not active or period != active.get("period"))
 
+    users_cache = load_users()
+
     temp_by_group = {}
     temp_count_by_group = {}
     for t in report.get("temporary_cards", []):
@@ -771,6 +812,7 @@ def generate_report(period=None):
             "name": g,
             "summary": g_summary,
             "submission": submission,
+            "managers": managers_for_group(g, users_cache),
             "flagged": flagged,
             "denied_items": [f for f in flagged if f["decision"].get("action") == "deny"],
             "approved": approved,

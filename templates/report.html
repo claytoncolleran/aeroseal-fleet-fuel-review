@@ -329,7 +329,7 @@
           {% if total_cmt > 0 %}<strong style="color: #C62828;">{{ total_cmt }}</strong>{% else %}0{% endif %}
         </td>
         <td style="text-align: right;">${{ "{:,.2f}".format(g.combined_spend) }}</td>
-        <td>{{ g.submission.get('manager_name', '—') if g.submission else '—' }}</td>
+        <td>{{ g.submission.get('manager_name', '—') if g.submission else (g.managers|join(', ') if g.managers else 'Unassigned') }}</td>
         <td>{{ g.submission.get('submitted_at', '')[:10] if g.submission else 'Pending' }}</td>
       </tr>
       {% endfor %}
