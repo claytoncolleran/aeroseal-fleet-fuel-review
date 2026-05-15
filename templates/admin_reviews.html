@@ -105,6 +105,8 @@
   </div>
   {% if review.status == 'in_review' %}
     <a href="/admin" style="font-size: 13px; font-weight: 600;">View Dashboard &rarr;</a>
+  {% else %}
+    <a href="/admin/report/{{ review.period }}" style="font-size: 13px; font-weight: 600;">View Report &rarr;</a>
   {% endif %}
 </div>
 {% endfor %}

@@ -212,11 +212,19 @@
       <a href="/admin" style="font-size: 13px; color: var(--aeroseal-sapphire); text-decoration: none;">&larr; Back to Admin</a>
     </div>
     <div style="display: flex; gap: 10px; align-items: center;">
+      {% if not report_readonly %}
       <input type="text" id="admin-name" class="admin-input" placeholder="Fleet Admin Name">
       <button class="btn btn-primary" onclick="adminApprove(this)">Acknowledge &amp; Sign</button>
+      {% endif %}
       <button class="btn btn-outline" onclick="window.print()">Download PDF</button>
     </div>
   </div>
+
+  {% if report_readonly %}
+  <div class="no-print" style="background: #EEF4F8; border-left: 3px solid var(--aeroseal-sapphire); padding: 10px 14px; margin-bottom: 16px; font-size: 13px; color: #5A6B7B;">
+    Archived report for <strong>{{ viewing.label or viewing_period if viewing else viewing_period }}</strong> (read-only). The sign-off recorded at completion is shown below.
+  </div>
+  {% endif %}
 
   <!-- Report Header -->
   <div class="report-header">
@@ -439,11 +447,11 @@
   <!-- Signature Block -->
   <div class="signature-block">
     <div>
-      <div class="sig-line" id="sig-admin-name"></div>
+      <div class="sig-line" id="sig-admin-name">{{ admin_approval.admin_name if admin_approval else '' }}</div>
       <div class="sig-label">Fleet Administrator Name</div>
     </div>
     <div>
-      <div class="sig-line" id="sig-date"></div>
+      <div class="sig-line" id="sig-date">{{ admin_approval.approved_at[:10] if admin_approval and admin_approval.approved_at else '' }}</div>
       <div class="sig-label">Date</div>
     </div>
   </div>

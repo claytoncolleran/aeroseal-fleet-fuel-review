@@ -654,12 +654,21 @@ def admin_group_detail(group_name):
 # ═══════════════════════════════════════════════════════════════════════════════
 
 @app.route("/admin/report")
+@app.route("/admin/report/<period>")
 @admin_required
-def generate_report():
-    report = load_report()
-    decisions = load_decisions()
+def generate_report(period=None):
+    report = load_report(period)
+    decisions = load_decisions(period)
     groups = sorted(report.get("group_summary", {}).keys())
     active = get_active_review()
+
+    # Which review is this report for, and is it a read-only archived view?
+    viewing = load_review_meta(period) if period else active
+    admin_approval = decisions.get("_admin_approval")
+    # Read-only when explicitly viewing a period that is not the active review
+    # (archived reports must not expose the Sign control, which always posts
+    # against the active review).
+    report_readonly = bool(period) and (not active or period != active.get("period"))
 
     temp_by_group = {}
     temp_count_by_group = {}
@@ -808,6 +817,10 @@ def generate_report():
                            mpg_summary=mpg_summary,
                            flagged_vehicles=flagged_vehicles,
                            active_review=active,
+                           viewing=viewing,
+                           viewing_period=period,
+                           report_readonly=report_readonly,
+                           admin_approval=admin_approval,
                            generated_at=datetime.now().strftime("%Y-%m-%d %H:%M"))
 
 
