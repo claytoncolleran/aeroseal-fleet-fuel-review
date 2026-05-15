@@ -934,6 +934,87 @@ def regroup_subaccounts(period):
     return jsonify(preview), 200
 
 
+@app.route("/admin/test-approve/<period>", methods=["GET", "POST"])
+@admin_required
+def test_approve_review(period):
+    """TEST UTILITY: programmatically mark an entire review as approved so
+    the consolidated accounting report can be previewed in its final state.
+
+    Approves every flagged vehicle and equipment transaction, records a
+    submission for every group, and writes the admin sign-off, then sets
+    the review complete. Sends NO notifications of any kind (it writes
+    submissions directly via the DB helper, never through submit_group, so
+    the all-complete admin-email hook is never reached, and it never calls
+    the manager notification path).
+
+    GET = preview counts (no writes). POST = apply."""
+    if not USE_DB:
+        return jsonify({"status": "error",
+                         "message": "Test-approve requires DATABASE_URL (production only)."}), 400
+
+    review = database.db_get_review(period)
+    if not review:
+        return jsonify({"status": "error", "message": f"No review found for {period}"}), 404
+    review_id = review["id"]
+
+    report = load_report(period)
+    vehicle_flagged = [t for t in report.get("transactions", [])
+                       if t.get("flag_count", 0) > 0]
+    equip_flagged = [t for t in report.get("equipment_cards", [])
+                     if t.get("flag_count", 0) > 0]
+
+    groups = set(report.get("group_summary", {}).keys())
+    for t in (report.get("transactions", []) + report.get("equipment_cards", [])
+              + report.get("temporary_cards", []) + report.get("declined_transactions", [])):
+        if t.get("fleet_group"):
+            groups.add(t["fleet_group"])
+    groups = sorted(groups)
+
+    summary = {
+        "period": period,
+        "vehicle_flags_to_approve": len(vehicle_flagged),
+        "equipment_flags_to_approve": len(equip_flagged),
+        "groups_to_submit": len(groups),
+        "groups": groups,
+        "notifications": "none (suppressed by design)",
+        "equipment_ack_caveat": ("Equipment Acknowledged will display 0 in "
+            "the report until the separate equipment-decision round-trip "
+            "fix lands; this is the known pre-existing bug, not a test failure."),
+    }
+
+    if request.method == "GET":
+        summary["status"] = "preview"
+        summary["next_step"] = "POST to this same URL to apply the test approval."
+        return jsonify(summary), 200
+
+    reviewer = "(TEST auto-approval)"
+    for t in vehicle_flagged:
+        txn_key = f"{t['vehicle_name']}_{t['transaction_date']}_{t['transaction_time']}"
+        database.db_save_decision(review_id, txn_key, t["fleet_group"],
+                                  "approve", "", reviewer)
+    for t in equip_flagged:
+        txn_key = f"EQUIP_{t.get('card_no') or t.get('cardholder')}_{t['transaction_date']}_{t['transaction_time']}"
+        database.db_save_decision(review_id, txn_key, t["fleet_group"],
+                                  "approve", "", reviewer)
+    for g in groups:
+        database.db_save_group_submission(review_id, g, f"(TEST) {g}",
+                                          "test-auto-approval")
+    database.db_save_admin_approval(review_id, "(TEST) Auto-Approved",
+                                    session.get("email", "test"))
+    database.db_update_review(period, status="complete",
+                              completed_at=datetime.now())
+
+    summary["status"] = "applied"
+    summary["message"] = (
+        f"TEST review {period} marked fully approved: "
+        f"{len(vehicle_flagged)} vehicle + {len(equip_flagged)} equipment "
+        f"flags acknowledged, {len(groups)} groups submitted, admin signed, "
+        f"status=complete. No notifications sent. "
+        f"View at /admin/report/{period}."
+    )
+    return jsonify(summary), 200
+
+
 @app.route("/admin/backfill-equipment/<period>", methods=["GET", "POST"])
 @admin_required
 def backfill_equipment(period):
