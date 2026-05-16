@@ -103,11 +103,17 @@
       {% if review.completed_at %} &middot; Completed: {{ review.completed_at[:10] }}{% endif %}
     </div>
   </div>
-  {% if review.status == 'in_review' %}
-    <a href="/admin" style="font-size: 13px; font-weight: 600;">View Dashboard &rarr;</a>
-  {% else %}
-    <a href="/admin/report/{{ review.period }}" style="font-size: 13px; font-weight: 600;">View Report &rarr;</a>
-  {% endif %}
+  <div style="display: flex; align-items: center; gap: 16px;">
+    {% if review.status == 'in_review' %}
+      <a href="/admin" style="font-size: 13px; font-weight: 600;">View Dashboard &rarr;</a>
+    {% else %}
+      <a href="/admin/report/{{ review.period }}" style="font-size: 13px; font-weight: 600;">View Report &rarr;</a>
+    {% endif %}
+    <button onclick='openDeleteModal({{ review.period|tojson }}, {{ (review.label or review.period)|tojson }})'
+            style="font-size: 12px; font-weight: 600; padding: 6px 14px; background: transparent; color: #C62828; border: 1px solid #C62828; border-radius: 4px; cursor: pointer;">
+      Delete
+    </button>
+  </div>
 </div>
 {% endfor %}
 
@@ -116,6 +122,24 @@
   No reviews yet. Upload a Corpay spreadsheet above to start your first monthly review.
 </div>
 {% endif %}
+
+<!-- Delete Review Confirmation Modal -->
+<div id="delete-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.45); z-index:1000; align-items:center; justify-content:center;">
+  <div style="background:#fff; border-radius:12px; padding:28px 32px; max-width:460px; width:90%; box-shadow:0 8px 32px rgba(0,0,0,0.18);">
+    <h3 style="font-size:16px; font-weight:700; color:#C62828; margin:0 0 12px;">Delete Review</h3>
+    <p style="font-size:14px; color:var(--aeroseal-midnight-blue); line-height:1.5; margin:0 0 8px;">
+      Permanently delete <strong id="delete-review-label"></strong>?
+    </p>
+    <p style="font-size:13px; color:#5A6B7B; line-height:1.5; margin:0 0 20px;">
+      This removes the review and all of its transactions, flags, manager decisions, submissions, and the admin sign-off. This cannot be undone.
+    </p>
+    <div id="delete-error" class="section-banner banner-warn" style="display:none; margin-bottom:12px;"></div>
+    <div style="display:flex; justify-content:flex-end; gap:8px;">
+      <button id="delete-cancel-btn" style="padding:10px 20px; font-size:14px; border:1px solid var(--aeroseal-titanium); border-radius:6px; background:#fff; color:var(--aeroseal-midnight-blue); cursor:pointer;" onclick="closeDeleteModal()">Cancel</button>
+      <button id="delete-confirm-btn" style="padding:10px 20px; font-size:14px; border:none; border-radius:6px; background:#C62828; color:#fff; font-weight:600; cursor:pointer;" onclick="confirmDeleteReview()">Delete Review</button>
+    </div>
+  </div>
+</div>
 
 {% endblock %}
 
@@ -127,6 +151,53 @@ function showMsg(id, msg, isError) {
   el.className = isError ? 'section-banner banner-warn' : 'section-banner banner-info';
   el.style.display = 'block';
 }
+
+// ─── Delete Review ───
+let deleteTargetPeriod = null;
+
+function openDeleteModal(period, label) {
+  deleteTargetPeriod = period;
+  document.getElementById('delete-review-label').textContent = label + ' (' + period + ')';
+  document.getElementById('delete-error').style.display = 'none';
+  document.getElementById('delete-modal').style.display = 'flex';
+}
+
+function closeDeleteModal() {
+  document.getElementById('delete-modal').style.display = 'none';
+  deleteTargetPeriod = null;
+}
+
+function confirmDeleteReview() {
+  if (!deleteTargetPeriod) return;
+  const btn = document.getElementById('delete-confirm-btn');
+  btn.disabled = true;
+  btn.textContent = 'Deleting...';
+  fetch('/api/reviews/' + encodeURIComponent(deleteTargetPeriod), { method: 'DELETE' })
+    .then(r => r.json())
+    .then(resp => {
+      if (resp.status === 'ok') {
+        location.reload();
+      } else {
+        const el = document.getElementById('delete-error');
+        el.textContent = resp.message || 'Failed to delete review.';
+        el.style.display = 'block';
+        btn.disabled = false;
+        btn.textContent = 'Delete Review';
+      }
+    })
+    .catch(() => {
+      const el = document.getElementById('delete-error');
+      el.textContent = 'Request failed.';
+      el.style.display = 'block';
+      btn.disabled = false;
+      btn.textContent = 'Delete Review';
+    });
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  const m = document.getElementById('delete-modal');
+  if (m) m.addEventListener('click', function(e) { if (e.target === this) closeDeleteModal(); });
+});
 
 function processReview() {
   const fileInput = document.getElementById('corpay-file');
