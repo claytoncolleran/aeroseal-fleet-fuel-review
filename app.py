@@ -786,8 +786,10 @@ def generate_report(period=None):
         # Real total for this row: vehicle + temp + equipment + declined.
         # group_summary.total_txns is vehicle-only, so sub-account rows
         # would otherwise show 0 despite having equipment/temp spend.
-        txn_count = (len(g_txns) + temp_count_by_group.get(g, 0)
-                     + equipment_count_by_group.get(g, 0) + g_declined_count)
+        vehicle_txn_count = len(g_txns)
+        subaccount_txn_count = (temp_count_by_group.get(g, 0)
+                                + equipment_count_by_group.get(g, 0) + g_declined_count)
+        txn_count = vehicle_txn_count + subaccount_txn_count
         flagged = []
         for t in g_txns:
             if t["flag_count"] > 0:
@@ -819,6 +821,8 @@ def generate_report(period=None):
             "name": g,
             "summary": g_summary,
             "txn_count": txn_count,
+            "vehicle_txn_count": vehicle_txn_count,
+            "subaccount_txn_count": subaccount_txn_count,
             "submission": submission,
             "managers": managers_for_group(g, users_cache),
             "flagged": flagged,
@@ -835,6 +839,19 @@ def generate_report(period=None):
             "equipment_spend": equipment_spend,
             "combined_spend": spend + temp_spend + equipment_spend,
         })
+
+    # Split the merged rows into two reconciling tables:
+    #  - Vehicle fleet groups (Fleetio group_summary keys): F1-F6 review
+    #  - Sub-accounts (equipment + temporary + declined Corpay spend): E1/E2
+    # A key could in principle land in both; each table sums only its own
+    # portion so totals never double-count and still reconcile to the
+    # category breakdown above.
+    vehicle_group_keys = set(report.get("group_summary", {}).keys())
+    vehicle_groups = [r for r in group_data if r["name"] in vehicle_group_keys]
+    subaccount_groups = [
+        r for r in group_data
+        if r["temp_spend"] or r["equipment_spend"] or r["subaccount_txn_count"]
+    ]
 
     mpg_summary = report.get("mpg_summary_by_vehicle", {})
     flagged_vehicles = {k: v for k, v in mpg_summary.items() if v.get("flagged")}
@@ -877,6 +894,9 @@ def generate_report(period=None):
 
     return render_template("report.html",
                            group_data=group_data,
+                           vehicle_groups=vehicle_groups,
+                           subaccount_groups=subaccount_groups,
+                           subaccount_grand_total=temp_grand_total + equipment_grand_total,
                            grand_total=vehicle_grand_total + temp_grand_total + equipment_grand_total,
                            vehicle_grand_total=vehicle_grand_total,
                            temp_grand_total=temp_grand_total,

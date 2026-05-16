@@ -302,8 +302,8 @@
     </tbody>
   </table>
 
-  <!-- Spend by Fleet Group -->
-  <h2>Spend by Fleet Group</h2>
+  <!-- Vehicle Fuel Purchases: Spend by Fleet Group -->
+  <h2>Vehicle Fuel Purchases: Spend by Fleet Group</h2>
   <table>
     <thead>
       <tr>
@@ -318,34 +318,78 @@
       </tr>
     </thead>
     <tbody>
-      {% for g in group_data %}
+      {% for g in vehicle_groups %}
       <tr>
         <td><strong>{{ g.name }}</strong></td>
-        <td>{{ g.txn_count }}</td>
-        <td>{{ g.summary.get('flagged_txns', 0) + g.equipment_flag_count }}</td>
-        <td>{{ g.approved + g.equipment_approved }}</td>
+        <td>{{ g.vehicle_txn_count }}</td>
+        <td>{{ g.summary.get('flagged_txns', 0) }}</td>
+        <td>{{ g.approved }}</td>
         <td>
-          {% set total_cmt = g.denied + g.equipment_denied %}
-          {% if total_cmt > 0 %}<strong style="color: #C62828;">{{ total_cmt }}</strong>{% else %}0{% endif %}
+          {% if g.denied > 0 %}<strong style="color: #C62828;">{{ g.denied }}</strong>{% else %}0{% endif %}
         </td>
-        <td style="text-align: right;">${{ "{:,.2f}".format(g.combined_spend) }}</td>
+        <td style="text-align: right;">${{ "{:,.2f}".format(g.spend) }}</td>
         <td>{{ g.submission.get('manager_name', '—') if g.submission else (g.managers|join(', ') if g.managers else 'Unassigned') }}</td>
         <td>{{ g.submission.get('submitted_at', '')[:10] if g.submission else 'Pending' }}</td>
       </tr>
       {% endfor %}
       <tr class="total-row">
-        <td>Grand Total</td>
-        <td>{{ spend_categories | sum(attribute='txn_count') }}</td>
-        <td>{{ total_flagged + total_equip_flagged }}</td>
-        <td>{{ total_approved + total_equip_approved }}</td>
-        <td>{{ total_denied + total_equip_denied }}</td>
-        <td style="text-align: right;">${{ "{:,.2f}".format(grand_total) }}</td>
+        <td>Subtotal &mdash; Vehicle</td>
+        <td>{{ vehicle_groups | sum(attribute='vehicle_txn_count') }}</td>
+        <td>{{ total_flagged }}</td>
+        <td>{{ total_approved }}</td>
+        <td>{{ total_denied }}</td>
+        <td style="text-align: right;">${{ "{:,.2f}".format(vehicle_grand_total) }}</td>
         <td colspan="2"></td>
       </tr>
     </tbody>
   </table>
   <p style="font-size: 11px; color: #5A6B7B; font-style: italic; margin-top: -8px;">
-    Total Spend reflects all Corpay spend per fleet group (vehicle, temporary, and equipment cards). Flagged / Acknowledged / Commented counts combine vehicle card flags (F1-F6) and equipment card flags (E1-E2). See Spend Breakdown by Category above for the split across categories.
+    Vehicle card spend reviewed by fleet managers via the F1&ndash;F6 flag pipeline. Subtotal reconciles to the Vehicle Cards row in Spend Breakdown by Category above.
+  </p>
+
+  <!-- Equipment & Temporary Card Fuel Purchases: Spend by Sub-Account -->
+  <h2>Equipment &amp; Temporary Card Fuel Purchases: Spend by Sub-Account</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Sub-Account</th>
+        <th>Transactions</th>
+        <th>Flagged</th>
+        <th>Acknowledged</th>
+        <th>Commented</th>
+        <th style="text-align: right;">Total Spend</th>
+        <th>Manager</th>
+        <th>Submitted</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for g in subaccount_groups %}
+      <tr>
+        <td><strong>{{ g.name }}</strong></td>
+        <td>{{ g.subaccount_txn_count }}</td>
+        <td>{{ g.equipment_flag_count }}</td>
+        <td>{{ g.equipment_approved }}</td>
+        <td>
+          {% if g.equipment_denied > 0 %}<strong style="color: #C62828;">{{ g.equipment_denied }}</strong>{% else %}0{% endif %}
+        </td>
+        <td style="text-align: right;">${{ "{:,.2f}".format(g.temp_spend + g.equipment_spend) }}</td>
+        <td>{{ g.submission.get('manager_name', '—') if g.submission else (g.managers|join(', ') if g.managers else 'Unassigned') }}</td>
+        <td>{{ g.submission.get('submitted_at', '')[:10] if g.submission else 'Pending' }}</td>
+      </tr>
+      {% endfor %}
+      <tr class="total-row">
+        <td>Subtotal &mdash; Equipment &amp; Temporary</td>
+        <td>{{ subaccount_groups | sum(attribute='subaccount_txn_count') }}</td>
+        <td>{{ total_equip_flagged }}</td>
+        <td>{{ total_equip_approved }}</td>
+        <td>{{ total_equip_denied }}</td>
+        <td style="text-align: right;">${{ "{:,.2f}".format(subaccount_grand_total) }}</td>
+        <td colspan="2"></td>
+      </tr>
+    </tbody>
+  </table>
+  <p style="font-size: 11px; color: #5A6B7B; font-style: italic; margin-top: -8px;">
+    Flagged / Acknowledged / Commented reflect equipment card flags (E1&ndash;E2) only. Temporary-card transactions carry no flags and are auto-acknowledged on submission. Subtotal reconciles to the Temporary Cards + Equipment / Unit Cards rows in Spend Breakdown by Category above; the two subtotals together equal Total Fleet Spend.
   </p>
 
   <!-- Vehicle Commented Items Detail -->
