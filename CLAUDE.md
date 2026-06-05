@@ -177,8 +177,13 @@ All core phases complete. System is deployed and operational. First live review 
 - Equipment card flag review (E1 Large Fill >$50, E2 Corpay Default, with acknowledge/comment UI for managers): COMPLETE
 - Consolidated report restructured as Total Fleet Spend with Spend Breakdown by Category table (vehicle + temporary + equipment, review status per category): COMPLETE
 - Idempotent admin backfill route for equipment data on prior review periods (`/admin/backfill-equipment/<period>`): COMPLETE
+- Dashboard reporting fix (2026-06-05, commit `3c5ea82`): added an Equipment stat card, restored the Fill Events stat (`db_build_report` now sets `total_fill_events` from `sum(vehicle_mpg.fill_count)`; it was never populated so the card showed 0), and relabeled "Transactions" to "Vehicle Transactions" so the headline no longer reads as the full-upload total: COMPLETE
 
 ## Roadmap / Open Items
+
+### Known data note: missing April 2026 review (logged 2026-06-05)
+Production has only two reviews: `2026-03` (complete) and `2026-05` (in_review). There is **no April review** and **zero transactions dated Apr 1-28** in the DB. The March review covers the Corpay cycle Feb 27-Mar 30; the May review covers Apr 29-May 30, so the April billing cycle (~Mar 31-Apr 28) was never processed/retained. The `reviews` id sequence jumped 7 -> 18 (ten ids consumed and deleted), consistent with April attempts that were created and later deleted. NOTE: `delete_review` in DB mode removes only DB rows, not the persistent-disk files (app.py:1464-1477), so a deleted April review's `corpay_upload.xlsx` / `anomaly_report.json` may still exist under `/var/data/reviews/2026-04/`. To resolve: either re-run the April Corpay cycle as a new review, or (if recovery is wanted) check that disk path. Separately, **unmatched vehicle rows are dropped silently** during processing (`match_transactions`, anomaly_detection.py:141) - not stored, not surfaced, only console-logged. Surfacing them is a deferred follow-up (needs storage + a dashboard count).
+
 
 ### Fleet Administrator Review Notes (briefing doc) - productionize
 **Status:** Prototype exists as a static one-off at `/admin/review-notes/2026-03` (added 2026-04-10 commit `423d3b5`). It is a hard-coded HTML file listing flagged transactions that warrant follow-up with fleet managers before the Fleet Administrator signs off on the consolidated accounting report.

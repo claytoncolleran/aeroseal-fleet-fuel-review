@@ -1,5 +1,20 @@
 # Handoff: Aeroseal Fleet Fuel Review
 
+> **Status:** complete (session note)
+> **Date:** 2026-06-05 15:05 EDT
+> **Shipped:** Commit `3c5ea82`, deployed live to Render at 19:02 UTC. May-dashboard reporting fix: db.py `db_build_report` now sets `total_fill_events = sum(vehicle_mpg.fill_count)` (was never populated, so the Fill Events card showed 0; =507 for May); templates/index.html adds an Equipment stat card (`equipment_transactions_excluded`=253) and relabels "Transactions" -> "Vehicle Transactions". Verified against a prod mirror, predeploy gate clean (0 blockers), live site healthy at `3c5ea82`. See CLAUDE.md Development Status + the "missing April 2026 review" data note.
+> **Diagnosis that prompted it:** May dashboard appeared to show 533 of 821 uploaded transactions. Cause: 533 = vehicle cards only; full split is 533 vehicle + 253 equipment + 31 temporary = 817 stored + 4 dropped (unmatched/blank rows; declines=0). Equipment had no stat card and Fill Events was stuck at 0 - both now fixed.
+> **Local env was torn down at handoff** (Docker mirror container `fuel-review-pg`, Flask server on 5001, `temp/` incl. the prod DB dump, and the unused PG16 `fuel_review` seed DB all removed for data hygiene).
+>
+> **To recreate the prod mirror locally** (prod is PostgreSQL 18.3; needs Docker + an authenticated `render` CLI):
+> 1. `docker run -d --name fuel-review-pg -p 5433:5432 -e POSTGRES_PASSWORD=local -e POSTGRES_DB=fuel_review postgres:18-alpine`
+> 2. Fetch the external conn string: `GET https://api.render.com/v1/postgres/dpg-d72ji28ule4c73e71v70-a/connection-info` with `Authorization: Bearer <key from ~/.render/cli.yaml>`; append `?sslmode=require`.
+> 3. `docker run --rm -e PGURL="$URL" postgres:18-alpine sh -c 'pg_dump --no-owner --no-acl -Fc "$PGURL"' > prod.dump`
+> 4. `docker exec -i fuel-review-pg pg_restore --no-owner --no-acl -U postgres -d fuel_review < prod.dump`
+> 5. Run the app: `DATABASE_URL=postgresql://postgres:local@127.0.0.1:5433/fuel_review SECRET_KEY=local-dev python3 app.py` (port 5001). Login is passwordless 6-digit code; with no local email provider, read it from the DB: `docker exec fuel-review-pg psql -U postgres -d fuel_review -tAc "select login_code from users where email='<you>';"` after submitting your email on `/login`.
+>
+> **Local-dev gotcha (still unfixed):** JSON-fallback mode (no `DATABASE_URL`) cannot authenticate at all - code generation and verification both hard-require `USE_DB` (app.py:368, app.py:411-413). The CLAUDE.md "Running Locally" snippet (`python3 app.py`, login `admin@aeroseal.com / changeme`) is stale: auth is now passwordless codes and requires a database. A local DB mirror (above) is the only way to run it locally.
+
 Produced by running the [passing-the-torch](https://github.com/claytoncolleran/passing-the-torch) skill on this project. This is the transfer-specific layer that complements [CLAUDE.md](CLAUDE.md). CLAUDE.md explains how the system works; this doc explains how to transfer ownership, operate it as someone who did not build it, and where the context lives that is not captured in code.
 
 ## Handoff Summary
