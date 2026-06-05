@@ -950,6 +950,7 @@ def db_build_report(period):
 
         summary = {
             "total_vehicle_transactions_analyzed": len(transactions),
+            "total_fill_events": sum((m.get("fill_count") or 0) for m in mpg_summary.values()),
             "total_flagged_transactions": sum(1 for t in transactions if t["flag_count"] > 0),
             "total_flags": total_flags,
             "flags_by_type": flags_by_type,

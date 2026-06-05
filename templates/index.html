@@ -5,7 +5,7 @@
   <h1>Fuel Review Dashboard</h1>
   {% if active_review %}
   <p><strong>{{ active_review.label or active_review.period }}</strong> &mdash;
-     {{ summary.get("total_vehicle_transactions_analyzed", 0) }} transactions analyzed
+     {{ summary.get("total_vehicle_transactions_analyzed", 0) }} vehicle transactions analyzed
      {% if active_review.deadline %} &middot; <span style="color: #E65100;">Due: {{ active_review.deadline }}</span>{% endif %}
   </p>
   {% else %}
@@ -16,7 +16,7 @@
 <div class="stats-row">
   <div class="stat-card">
     <div class="stat-number">{{ summary.get("total_vehicle_transactions_analyzed", 0) }}</div>
-    <div class="stat-label">Transactions</div>
+    <div class="stat-label">Vehicle Transactions</div>
   </div>
   <div class="stat-card warn">
     <div class="stat-number">{{ summary.get("total_flagged_transactions", 0) }}</div>
@@ -29,6 +29,10 @@
   <div class="stat-card accent">
     <div class="stat-number">{{ summary.get("total_fill_events", 0) }}</div>
     <div class="stat-label">Fill Events</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-number">{{ summary.get("equipment_transactions_excluded", 0) }}</div>
+    <div class="stat-label">Equipment</div>
   </div>
   <div class="stat-card">
     <div class="stat-number">{{ summary.get("temporary_card_transactions", 0) }}</div>
