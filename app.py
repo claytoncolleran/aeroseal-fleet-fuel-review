@@ -8,6 +8,7 @@ from flask import (Flask, render_template, request, jsonify, redirect,
                    url_for, session, flash, send_file)
 from werkzeug.utils import secure_filename
 from functools import wraps
+import html
 import json
 import os
 import random
@@ -95,7 +96,8 @@ def load_report(period=None):
     """Load anomaly report for a period (defaults to active review).
     Tries database first when USE_DB is True, falls back to JSON file."""
     empty_report = {"transactions": [], "temporary_cards": [], "equipment_cards": [],
-                     "declined_transactions": [], "group_summary": {}, "summary": {},
+                     "declined_transactions": [], "unmatched_transactions": [],
+                     "group_summary": {}, "summary": {},
                      "mpg_summary_by_vehicle": {}}
     if not period:
         active = get_active_review()
@@ -208,6 +210,20 @@ def add_sub_accounts(names):
         with open(SUB_ACCOUNTS_FILE, "w") as f:
             json.dump(sorted(existing | set(names)), f, indent=2)
     return new
+
+
+def normalize_group_key(group_name):
+    """Canonicalize a fleet-group key so a submission/decision reconciles
+    with the report's group_summary key byte-for-byte. The report keys come
+    straight from Fleetio group names (raw, e.g. "Houston & San Antonio"),
+    but a name that crosses the HTML/JS boundary in a template could arrive
+    HTML-escaped ("Houston &amp; San Antonio") or with stray whitespace.
+    Unescape entities and strip so the stored key matches the read key.
+    This is the defensive backstop; templates also emit the name via |tojson
+    so a correctly-rendered client already sends the exact key."""
+    if group_name is None:
+        return None
+    return html.unescape(str(group_name)).strip()
 
 
 def manager_groups(user):
@@ -550,7 +566,7 @@ def group_view(group_name):
 @login_required
 def submit_decision():
     data = request.json
-    group_name = data.get("group_name")
+    group_name = normalize_group_key(data.get("group_name"))
     txn_key = data.get("txn_key")
     action = data.get("action")
     reason = data.get("reason", "")
@@ -579,7 +595,7 @@ def submit_decision():
 @login_required
 def submit_group():
     data = request.json
-    group_name = data.get("group_name")
+    group_name = normalize_group_key(data.get("group_name"))
     manager_name = data.get("manager_name", "")
     submitted_by = session.get("email", "")
 
@@ -909,6 +925,7 @@ def generate_report(period=None):
                            total_equip_approved=total_equip_approved,
                            total_equip_denied=total_equip_denied,
                            summary=report.get("summary", {}),
+                           unmatched=report.get("unmatched_transactions", []),
                            mpg_summary=mpg_summary,
                            flagged_vehicles=flagged_vehicles,
                            active_review=active,
@@ -1386,6 +1403,9 @@ def create_review():
             mpg_data = report.get("mpg_summary_by_vehicle", {})
             if mpg_data:
                 database.db_insert_vehicle_mpg(review_id, mpg_data)
+
+            # Write unmatched vehicle rows (suffix matched no Fleetio vehicle)
+            database.db_insert_unmatched(review_id, report.get("unmatched_transactions", []))
     else:
         # JSON fallback
         decisions_path = os.path.join(review_dir, "review_decisions.json")

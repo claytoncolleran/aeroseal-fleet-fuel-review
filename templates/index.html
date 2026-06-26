@@ -42,6 +42,12 @@
     <div class="stat-number">{{ summary.get("declined_transactions", 0) }}</div>
     <div class="stat-label">Declined</div>
   </div>
+  {% if current_user and current_user.role == 'admin' %}
+  <div class="stat-card {% if summary.get('unmatched_transactions', 0) > 0 %}warn{% endif %}">
+    <div class="stat-number">{{ summary.get("unmatched_transactions", 0) }}</div>
+    <div class="stat-label">Unmatched</div>
+  </div>
+  {% endif %}
 </div>
 
 <div class="section-banner banner-info">

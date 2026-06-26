@@ -351,7 +351,7 @@
 
 {% block scripts %}
 <script>
-const GROUP_NAME = "{{ group_name }}";
+const GROUP_NAME = {{ group_name|tojson }};
 let totalFlagged = 0;
 let reviewed = 0;
 

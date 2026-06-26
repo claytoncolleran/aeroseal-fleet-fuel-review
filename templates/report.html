@@ -488,6 +488,29 @@
     </tbody>
   </table>
 
+  {% if summary.get('unmatched_transactions', 0) > 0 %}
+  <h2 style="color: #E65100;">Unmatched Vehicle Rows &mdash; Data Quality</h2>
+  <p style="font-size: 11px; color: #5A6B7B; margin-bottom: 8px;">
+    {{ summary.get('unmatched_transactions', 0) }} vehicle-card transaction(s) could not be matched to a Fleetio vehicle by suffix,
+    so their spend is <strong>not</strong> included in Total Fleet Spend above and they were not flag-reviewed.
+    Resolve the cardholder-name mismatch (e.g. correct the Corpay card name or the Fleetio vehicle name) so the next cycle captures them.
+  </p>
+  <table>
+    <thead><tr><th>Date</th><th>Cardholder Last Name</th><th>Vendor</th><th>Net</th><th>Sub Account</th></tr></thead>
+    <tbody>
+      {% for u in unmatched %}
+      <tr>
+        <td>{{ u.get('transaction_date') or '' }}</td>
+        <td>{{ u.get('last_name') or '' }}</td>
+        <td>{{ u.get('vendor') or '' }}</td>
+        <td>${{ "{:,.2f}".format(u.get('net_price') or 0) }}</td>
+        <td>{{ u.get('sub_account') or '' }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+
   <!-- Signature Block -->
   <div class="signature-block">
     <div>

@@ -176,6 +176,27 @@ def init_db():
                 UNIQUE(review_id, fleet_group)
             );
 
+            CREATE TABLE IF NOT EXISTS unmatched_transactions (
+                id SERIAL PRIMARY KEY,
+                review_id INTEGER REFERENCES reviews(id) ON DELETE CASCADE,
+                transaction_date DATE,
+                transaction_time TIME,
+                cardholder VARCHAR(255),
+                last_name VARCHAR(255),
+                driver VARCHAR(255),
+                vendor VARCHAR(500),
+                location VARCHAR(500),
+                state VARCHAR(10),
+                status VARCHAR(50),
+                gallons DECIMAL(10,2),
+                gross_price DECIMAL(10,2),
+                net_price DECIMAL(10,2),
+                product VARCHAR(255),
+                odometer DECIMAL(12,1),
+                card_no VARCHAR(50),
+                sub_account VARCHAR(100)
+            );
+
             CREATE TABLE IF NOT EXISTS admin_approvals (
                 id SERIAL PRIMARY KEY,
                 review_id INTEGER REFERENCES reviews(id) ON DELETE CASCADE UNIQUE,
@@ -564,6 +585,30 @@ def db_insert_vehicle_mpg(review_id, mpg_data):
             )
 
 
+def db_insert_unmatched(review_id, unmatched, replace=True):
+    """Bulk insert unmatched vehicle rows (Corpay vehicle-card transactions
+    whose suffix matched no Fleetio vehicle). Stored so the dropped-rows
+    count is visible and auditable instead of vanishing silently."""
+    with get_db() as conn:
+        cur = conn.cursor()
+        if replace:
+            cur.execute("DELETE FROM unmatched_transactions WHERE review_id = %s", (review_id,))
+        for u in unmatched:
+            cur.execute(
+                """INSERT INTO unmatched_transactions
+                   (review_id, transaction_date, transaction_time, cardholder, last_name,
+                    driver, vendor, location, state, status, gallons, gross_price,
+                    net_price, product, odometer, card_no, sub_account)
+                   VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
+                (review_id, u.get("transaction_date"), u.get("transaction_time"),
+                 u.get("cardholder"), u.get("last_name"), u.get("driver"),
+                 u.get("vendor"), u.get("location"), u.get("state"), u.get("status"),
+                 u.get("gallons"), u.get("gross_price"), u.get("net_price"),
+                 u.get("product"), u.get("odometer"), u.get("card_no"),
+                 u.get("sub_account"))
+            )
+
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # DECISION CRUD
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -875,6 +920,35 @@ def db_build_report(period):
             else:
                 transactions.append(txn)
 
+        # ── Unmatched vehicle rows ───────────────────────────────────────────
+        cur.execute(
+            """SELECT transaction_date, transaction_time, cardholder, last_name, driver,
+                      vendor, location, state, status, gallons, gross_price, net_price,
+                      product, odometer, card_no, sub_account
+               FROM unmatched_transactions WHERE review_id = %s ORDER BY id""",
+            (review_id,)
+        )
+        unmatched_transactions = []
+        for row in cur.fetchall():
+            unmatched_transactions.append({
+                "transaction_date": str(row[0]) if row[0] else None,
+                "transaction_time": str(row[1]) if row[1] else None,
+                "cardholder": row[2],
+                "last_name": row[3],
+                "driver": row[4],
+                "vendor": row[5],
+                "location": row[6],
+                "state": row[7],
+                "status": row[8],
+                "gallons": float(row[9]) if row[9] is not None else None,
+                "gross_price": float(row[10]) if row[10] is not None else None,
+                "net_price": float(row[11]) if row[11] is not None else None,
+                "product": row[12],
+                "odometer": float(row[13]) if row[13] is not None else None,
+                "card_no": row[14],
+                "sub_account": row[15],
+            })
+
         # ── Vehicle MPG summary ──────────────────────────────────────────────
         cur.execute(
             """SELECT vehicle_name, period_mpg, baseline_mpg, total_miles, total_gallons,
@@ -958,6 +1032,7 @@ def db_build_report(period):
             "temporary_card_transactions": len(temporary_cards),
             "equipment_transactions_excluded": len(equipment_cards),
             "declined_transactions": len(declined_transactions),
+            "unmatched_transactions": len(unmatched_transactions),
             "fuel_type_medians": _fuel_type_medians(transactions),
         }
 
@@ -968,6 +1043,7 @@ def db_build_report(period):
             "temporary_cards": temporary_cards,
             "equipment_cards": equipment_cards,
             "declined_transactions": declined_transactions,
+            "unmatched_transactions": unmatched_transactions,
             "mpg_summary_by_vehicle": mpg_summary,
         }
 

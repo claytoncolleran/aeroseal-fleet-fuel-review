@@ -7,6 +7,7 @@ Outputs a structured JSON report for use in the approval workflow UI.
 
 import json
 import os
+import re
 from datetime import datetime, timedelta
 from collections import defaultdict
 
@@ -84,15 +85,30 @@ def load_fleetio_vehicles():
     return all_vehicles
 
 
+# ─── Vehicle suffix extraction ───────────────────────────────────────────────
+def vehicle_suffix(name):
+    """Extract a vehicle's matching key: the LAST run of digits in the name,
+    zero-padded to 4. Tolerant of the delimiter (hyphen, whitespace, or none)
+    so a Fleetio name ("11-GMC-Van-4650") and its Corpay "Cardholder Last
+    Name" ("GMC-VAN 4650", "RAM-VAN-4650", "RAM TRUCK 537") resolve to the
+    same key ("4650", "0537"). The previous logic split Fleetio names on
+    hyphen but Corpay names on whitespace, so a hyphen-joined Corpay suffix
+    (e.g. "GMC-VAN-4650") never matched. Returns "" when the name has no
+    digits (those rows fall through to the unmatched bucket)."""
+    if not name:
+        return ""
+    runs = re.findall(r"\d+", str(name))
+    return runs[-1].zfill(4) if runs else ""
+
+
 # ─── Match Corpay → Fleetio ──────────────────────────────────────────────────
 def match_transactions(corpay_rows, fleetio_vehicles):
     """Returns (vehicle_txns, equipment_txns, temp_txns, declined_txns, unmatched)."""
     fleetio_by_suffix = {}
     for v in fleetio_vehicles:
         name = v.get("name", "")
-        parts = name.split("-")
-        if parts:
-            suffix = parts[-1].zfill(4)
+        suffix = vehicle_suffix(name)
+        if suffix:
             fleetio_by_suffix[suffix] = v
 
     vehicle_txns = []
@@ -121,9 +137,8 @@ def match_transactions(corpay_rows, fleetio_vehicles):
         last_name = row.get("Cardholder Last Name", "") or ""
 
         if status == "DECLINED":
-            parts = last_name.strip().split()
-            suffix = parts[-1].zfill(4) if parts else ""
-            vehicle = fleetio_by_suffix.get(suffix)
+            suffix = vehicle_suffix(last_name)
+            vehicle = fleetio_by_suffix.get(suffix) if suffix else None
             declined_txns.append({"row": row, "card_type": "vehicle", "vehicle": vehicle})
             continue
 
@@ -131,9 +146,8 @@ def match_transactions(corpay_rows, fleetio_vehicles):
             temp_txns.append(row)
             continue
 
-        parts = last_name.strip().split()
-        suffix = parts[-1].zfill(4) if parts else ""
-        vehicle = fleetio_by_suffix.get(suffix)
+        suffix = vehicle_suffix(last_name)
+        vehicle = fleetio_by_suffix.get(suffix) if suffix else None
 
         if vehicle:
             vehicle_txns.append({"row": row, "vehicle": vehicle})
@@ -955,6 +969,32 @@ def run(corpay_file=None, baselines_file=None, output_file=None, flag_settings=N
             "flag_count": len(flags_for_txn),
         })
 
+    # ── Build unmatched vehicle records ──
+    # Vehicle-card rows whose Corpay "Cardholder Last Name" suffix matched no
+    # Fleetio vehicle. These were previously dropped silently (console-logged
+    # only). Now collected and persisted so the data-quality gap is visible
+    # and never silently shrinks a group's reported spend again.
+    unmatched_records = []
+    for row in unmatched:
+        unmatched_records.append({
+            "transaction_date": row.get("Transaction Date - Date"),
+            "transaction_time": row.get("Transaction Date - Time"),
+            "cardholder": row.get("Cardholder Full Name"),
+            "last_name": row.get("Cardholder Last Name"),
+            "driver": row.get("Spender") or row.get("Cardholder Full Name"),
+            "vendor": row.get("Vendor") or row.get("Description"),
+            "location": row.get("Address"),
+            "state": row.get("State"),
+            "status": row.get("Status"),
+            "gallons": safe_float(row.get("Unit/Gallons")),
+            "gross_price": safe_float(row.get("Gross Price")),
+            "net_price": safe_float(row.get("Net Price")),
+            "product": row.get("Product Description"),
+            "odometer": safe_float(row.get("Odometer")),
+            "card_no": row.get("Card No."),
+            "sub_account": row.get("Sub Account"),
+        })
+
     # ── Group summary ──
     group_summary = {}
     for txn in all_records:
@@ -1024,6 +1064,7 @@ def run(corpay_file=None, baselines_file=None, output_file=None, flag_settings=N
             "equipment_transactions_excluded": len(equipment_txns),
             "temporary_card_transactions": len(temp_records),
             "declined_transactions": len(declined_records),
+            "unmatched_transactions": len(unmatched_records),
         },
         "mpg_summary_by_vehicle": mpg_summary,
         "group_summary": group_summary,
@@ -1031,6 +1072,7 @@ def run(corpay_file=None, baselines_file=None, output_file=None, flag_settings=N
         "temporary_cards": temp_records,
         "equipment_cards": equipment_records,
         "declined_transactions": declined_records,
+        "unmatched_transactions": unmatched_records,
     }
 
     with open(_output, "w") as f:
@@ -1075,6 +1117,7 @@ def run(corpay_file=None, baselines_file=None, output_file=None, flag_settings=N
     print(f"    Temporary card transactions:  {len(temp_records)}")
     print(f"    Declined transactions:        {len(declined_records)}")
     print(f"    Equipment (excluded):         {len(equipment_txns)}")
+    print(f"    Unmatched vehicle rows:       {len(unmatched_records)}")
 
     print(f"\n  FLEET GROUPS WITH FLAGGED ITEMS:")
     for g in sorted(group_summary.keys()):
